@@ -1,0 +1,5 @@
+sudo systemctl restart httpd
+
+
+
+sudo chown -R apache:apache /var/www/html/Market
