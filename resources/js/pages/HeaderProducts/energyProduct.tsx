@@ -11,10 +11,13 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  ArrowRight,
   RotateCcw,
   Filter,
+  ArrowRight,
   Check,
+  Eye,
+  ShoppingCart,
+  Loader2,
 } from "lucide-react";
 
 import { useTranslation } from "@/translation";
@@ -74,6 +77,7 @@ export default function ProductPage() {
   const [sortOption, setSortOption] = useState("");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [loadingProductId, setLoadingProductId] = useState<number | null>(null);
 
   const scrollTargetRef = useRef<HTMLDivElement | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -336,6 +340,55 @@ export default function ProductPage() {
     };
   }
 
+  const addToCart = (product: ProductType) => {
+    const existing = localStorage.getItem("cartItems");
+    const cart: Array<{
+      id: number;
+      quantity?: number;
+      price?: number;
+      oldPrice?: number | null;
+      isDiscountedByNewPrice?: boolean;
+      [key: string]: unknown;
+    }> = existing ? JSON.parse(existing) : [];
+
+    const priceNum = Number(product.price || 0);
+    const newPrice = Number(product.new_price ?? 0);
+    const discountedPrice = Number(product.discounted_price ?? 0);
+
+    let unitPrice = priceNum;
+    if (newPrice > 0) {
+      unitPrice = newPrice;
+    } else if (product.pre_order_discount_applied || product.applied_promocode) {
+      unitPrice = discountedPrice;
+    }
+
+    const index = cart.findIndex((item) => item.id === product.id);
+
+    if (index > -1) {
+      cart[index].quantity = (cart[index].quantity || 1) + 1;
+    } else {
+      cart.push({
+        ...product,
+        price: unitPrice,
+        oldPrice: unitPrice < priceNum ? priceNum : null,
+        quantity: 1,
+        isDiscountedByNewPrice: newPrice > 0,
+      });
+    }
+
+    localStorage.setItem("cartItems", JSON.stringify(cart));
+    window.dispatchEvent(new Event("cartUpdated"));
+
+    toast.success(`${product.name} დაემატა კალათაში!`);
+  };
+
+  const handleAddToCart = async (product: ProductType) => {
+    setLoadingProductId(product.id);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    addToCart(product);
+    setLoadingProductId(null);
+  };
+
   const clearAllFilters = () => {
     setSearchTerm("");
     setCategoryQuery("");
@@ -378,7 +431,7 @@ export default function ProductPage() {
             </div>
             <div>
               <h2 className="text-base font-black text-slate-900">{tp.filter}</h2>
-              <p className="text-xs text-slate-500">აირჩიე სასურველი ფილტრები</p>
+              <p className="text-xs text-slate-500">{tp.filterSubtitle}</p>
             </div>
           </div>
 
@@ -388,7 +441,7 @@ export default function ProductPage() {
               className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700"
             >
               <RotateCcw size={13} />
-              გასუფთავება
+              {tp.clearFilters}
             </button>
           )}
         </div>
@@ -426,12 +479,12 @@ export default function ProductPage() {
             }}
             className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-slate-900 focus:ring-4 focus:ring-slate-100"
           >
-            <option value="">---</option>
+            <option value="">{tp.all}</option>
             <option value="price-asc">{t("body.energy.priceLowToHigh")}</option>
             <option value="price-desc">{t("body.energy.priceHighToLow")}</option>
-            <option value="stock-desc">მარაგი</option>
-            <option value="az">A-Z</option>
-            <option value="za">Z-A</option>
+            <option value="stock-desc">{tp.stockDesc}</option>
+            <option value="az">{tp.alphabeticAsc}</option>
+            <option value="za">{tp.alphabeticDesc}</option>
           </select>
         </div>
 
@@ -486,11 +539,10 @@ export default function ProductPage() {
             {t("body.energy.inStockOnly")}
           </span>
           <div
-            className={`flex h-6 w-6 items-center justify-center rounded-full transition ${
-              filterStock
+            className={`flex h-6 w-6 items-center justify-center rounded-full transition ${filterStock
                 ? "bg-slate-900 text-white shadow-[0_8px_18px_rgba(15,23,42,0.18)]"
                 : "border border-slate-300 bg-white text-transparent"
-            }`}
+              }`}
           >
             <Check size={14} />
           </div>
@@ -525,7 +577,7 @@ export default function ProductPage() {
 
           <div className="mt-2 max-h-56 overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
             {filteredTranslatedCategories.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-slate-500">No matches</div>
+              <div className="px-3 py-2 text-sm text-slate-500">{tp.noMatches}</div>
             ) : (
               filteredTranslatedCategories.map((cat) => {
                 const active = selectedCategories.includes(cat.key);
@@ -542,14 +594,13 @@ export default function ProductPage() {
                       );
                       setCurrentPage(1);
                     }}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${
-                      active
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${active
                         ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
                         : "text-slate-700 hover:bg-slate-50"
-                    }`}
+                      }`}
                   >
                     <span>{cat.label}</span>
-                    {active && <span className="text-xs font-semibold text-emerald-700">Selected</span>}
+                    {active && <span className="text-xs font-semibold text-emerald-700">{tp.selected}</span>}
                   </button>
                 );
               })
@@ -593,7 +644,7 @@ export default function ProductPage() {
 
           <div className="mt-2 max-h-56 overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
             {filteredBrands.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-slate-500">No matches</div>
+              <div className="px-3 py-2 text-sm text-slate-500">{tp.noMatches}</div>
             ) : (
               filteredBrands.map((brand) => {
                 const active = selectedBrands.includes(brand);
@@ -610,14 +661,13 @@ export default function ProductPage() {
                       );
                       setCurrentPage(1);
                     }}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${
-                      active
+                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${active
                         ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
                         : "text-slate-700 hover:bg-slate-50"
-                    }`}
+                      }`}
                   >
                     <span>{brand}</span>
-                    {active && <span className="text-xs font-semibold text-emerald-700">Selected</span>}
+                    {active && <span className="text-xs font-semibold text-emerald-700">{tp.selected}</span>}
                   </button>
                 );
               })
@@ -666,7 +716,7 @@ export default function ProductPage() {
             </BreadcrumbList>
           </Breadcrumb>
 
-          {/* HERO ONLY FROM FIRST FILE STYLE */}
+          {/* HERO */}
           <section className="group relative mb-10 h-[260px] w-full overflow-hidden rounded-[2.2rem] bg-slate-100 shadow-[0_20px_60px_rgba(15,23,42,0.14)] sm:h-[340px] lg:h-[420px]">
             <AnimatePresence mode="wait">
               <motion.img
@@ -677,7 +727,7 @@ export default function ProductPage() {
                 transition={{ duration: 0.75, ease: "circOut" }}
                 src={carouselImages[currentIndex]}
                 alt={`carousel-${currentIndex}`}
-                className="absolute h-full w-full object-cover"
+                className="absolute inset-0 h-full w-full object-fill object-center"
               />
             </AnimatePresence>
 
@@ -692,9 +742,8 @@ export default function ProductPage() {
                       setCurrentIndex(i);
                       resetInterval();
                     }}
-                    className={`h-2 rounded-full transition-all duration-500 ${
-                      i === currentIndex ? "w-10 bg-white" : "w-2 bg-white/50 hover:bg-white/80"
-                    }`}
+                    className={`h-2 rounded-full transition-all duration-500 ${i === currentIndex ? "w-10 bg-white" : "w-2 bg-white/50 hover:bg-white/80"
+                      }`}
                   />
                 ))}
               </div>
@@ -745,72 +794,22 @@ export default function ProductPage() {
 
             <main>
               <div className="mx-auto w-full max-w-[1480px]">
-                <div className="mb-6 rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-                  <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-                    <div>
-                      <h2 className="text-2xl font-black tracking-tight text-slate-900">
-                        {t("footer.products")}
-                      </h2>
-                      <p className="mt-1 text-sm text-slate-500">
-                        {t("body.energy.foundProducts").replace(
-                          "{count}",
-                          String(filteredGroupedProducts.length)
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2">
-                      {searchTerm && (
-                        <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
-                          ძებნა: {searchTerm}
-                        </span>
-                      )}
-                      {filterStock && (
-                        <span className="rounded-full bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white">
-                          მარაგშია
-                        </span>
-                      )}
-                      {sortOption && (
-                        <span className="rounded-full bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700">
-                          დალაგებული
-                        </span>
-                      )}
-                      {selectedCategories.slice(0, 3).map((cat) => (
-                        <span
-                          key={cat}
-                          className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700"
-                        >
-                          {t(`categories.${cat}`, { defaultValue: cat })}
-                        </span>
-                      ))}
-                      {selectedBrands.slice(0, 3).map((brand) => (
-                        <span
-                          key={brand}
-                          className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700"
-                        >
-                          {brand}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
                 {currentProducts.length === 0 ? (
                   <div className="rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-20 text-center shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
                     <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                       <Package size={28} />
                     </div>
                     <h3 className="text-2xl font-black text-slate-900">
-                      პროდუქტები ვერ მოიძებნა
+                      {t("body.energy.noProducts")}
                     </h3>
                     <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-500">
-                      შეცვალე ძებნის ტექსტი, კატეგორია, ბრენდი ან ფასის ფილტრი და თავიდან სცადე.
+                      {t("body.energy.noProductsDescription")}
                     </p>
                     <button
                       onClick={clearAllFilters}
                       className="mt-6 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
                     >
-                      ფილტრების გასუფთავება
+                      {tp.clearFilters}
                     </button>
                   </div>
                 ) : (
@@ -822,7 +821,7 @@ export default function ProductPage() {
                         hidden: { opacity: 0 },
                         visible: { opacity: 1, transition: { staggerChildren: 0.06 } },
                       }}
-                      className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                      className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
                     >
                       {currentProducts.map((product) => {
                         const displayPrice = getDisplayPrice(product);
@@ -831,20 +830,20 @@ export default function ProductPage() {
                         const discount =
                           displayPrice.hasDiscount && displayPrice.old
                             ? Math.round(
-                                ((Number(displayPrice.old) - Number(displayPrice.current)) /
-                                  Number(displayPrice.old)) *
-                                  100
-                              )
+                              ((Number(displayPrice.old) - Number(displayPrice.current)) /
+                                Number(displayPrice.old)) *
+                              100
+                            )
                             : 0;
 
                         return (
                           <motion.div
                             key={product.id}
                             variants={{
-                              hidden: { opacity: 0, y: 16 },
+                              hidden: { opacity: 0, y: 30 },
                               visible: { opacity: 1, y: 0 },
                             }}
-                            transition={{ duration: 0.35 }}
+                            transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
                             className="group relative"
                           >
                             <Link
@@ -854,79 +853,114 @@ export default function ProductPage() {
                               })}
                               className="block h-full outline-none"
                             >
-                              <div className="relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-[0_20px_50px_rgba(15,23,42,0.10)]">
-                                <div className="relative overflow-hidden bg-gradient-to-b from-slate-50 to-white">
-                                  <div className="absolute inset-x-4 top-4 z-20 flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 rounded-full bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur-xl">
-                                      <span
-                                        className={`h-1.5 w-1.5 rounded-full ${
-                                          inStock ? "bg-emerald-500" : "bg-slate-400"
-                                        }`}
-                                      />
-                                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-600">
-                                        {inStock ? "In Stock" : "Out"}
+                              <div className="relative flex h-full min-h-[340px] flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition-all duration-500 hover:-translate-y-1 hover:border-emerald-100 hover:shadow-[0_20px_44px_-18px_rgba(15,23,42,0.14)]">
+
+                                {/* Image Container */}
+                                <div className="relative aspect-[1/1] overflow-hidden rounded-[1.6rem] border border-slate-100 bg-gradient-to-b from-slate-50 to-white">
+                                  {/* Floating Badges */}
+                                  <div className="absolute inset-x-2.5 top-2.5 z-20 flex items-start justify-between">
+                                    <div className={`flex items-center gap-1 rounded-full border px-2.5 py-1 shadow-sm backdrop-blur-md ${inStock ? "border-emerald-100 bg-white/90 text-emerald-700" : "border-slate-200 bg-white/90 text-slate-500"
+                                      }`}>
+                                      <div className={`h-1.5 w-1.5 rounded-full ${inStock ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                                      <span className="text-[9px] font-bold uppercase tracking-wide">
+                                        {inStock ? tp.inStock : tp.outOfStock}
                                       </span>
                                     </div>
 
                                     {discount > 0 && (
-                                      <div className="rounded-full bg-emerald-600 px-2.5 py-1.5 text-[10px] font-black text-white shadow-lg shadow-emerald-200">
+                                      <div className="rounded-full bg-emerald-600 px-2.5 py-1 text-[9px] font-black text-white shadow-lg shadow-emerald-200/40">
                                         -{discount}%
                                       </div>
                                     )}
                                   </div>
 
-                                  <div className="flex h-[250px] items-center justify-center p-6">
+                                  {/* Product Image */}
+                                  <div className="flex h-full w-full items-center justify-center p-6 transition-transform duration-700 ease-out group-hover:scale-[1.04]">
                                     <img
                                       src={imageUrl}
                                       alt={product.name}
                                       loading="lazy"
-                                      className="h-full w-full object-contain transition-all duration-500 group-hover:scale-105"
+                                      className="h-full w-full object-contain drop-shadow-xl"
                                     />
+                                  </div>
+
+                                  {/* Hover Overlay Button */}
+                                  <div className="absolute inset-0 flex items-center justify-center bg-slate-900/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                                    <div className="flex items-center gap-2 translate-y-4 rounded-full border border-slate-200 bg-white/95 px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-900 shadow-2xl transition-transform duration-500 group-hover:translate-y-0">
+                                      <Eye size={13} />
+                                      {tp.view}
+                                    </div>
                                   </div>
                                 </div>
 
-                                <div className="flex flex-1 flex-col p-5">
-                                  <div className="space-y-1.5">
+                                {/* Product Info */}
+                                <div className="flex flex-1 flex-col px-3.5 py-3.5">
+                                  <div className="mb-3 space-y-2">
                                     {product.brand && (
-                                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-600">
+                                      <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-emerald-600/80">
                                         {product.brand}
-                                      </p>
+                                      </span>
                                     )}
-
-                                    <h3 className="line-clamp-2 min-h-[52px] text-[17px] font-bold leading-6 text-slate-900 transition-colors group-hover:text-emerald-700">
+                                    <h3 className="line-clamp-2 text-[15px] font-extrabold leading-5 text-slate-900 transition-colors group-hover:text-emerald-700">
                                       {product.name}
                                     </h3>
+                                    {product.code && (
+                                      <p className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-500">
+                                        ID: {product.code}
+                                      </p>
+                                    )}
                                   </div>
 
-                                  <div className="mt-auto flex items-end justify-between gap-3 pt-5">
+                                  {/* Price Section */}
+                                  <div className="mt-auto flex items-end justify-between border-t border-slate-100 pt-3">
                                     <div className="flex flex-col">
                                       {discount > 0 && displayPrice.old && (
-                                        <span className="text-xs font-medium text-slate-400 line-through decoration-emerald-400/40">
+                                        <span className="text-[11px] font-semibold text-slate-400 line-through">
                                           {Number(displayPrice.old).toFixed(2)} ₾
                                         </span>
                                       )}
-
                                       <div className="flex items-baseline gap-1 text-slate-900">
-                                        <span className="text-2xl font-black tracking-tight">
+                                        <span className="text-xl font-black tracking-tight">
                                           {Math.floor(Number(displayPrice.current))}
                                         </span>
-                                        <span className="text-sm font-bold">
-                                          .
-                                          {(Number(displayPrice.current) % 1)
-                                            .toFixed(2)
-                                            .slice(2)}{" "}
-                                          ₾
+                                        <span className="text-xs font-bold text-slate-500">
+                                          .{(Number(displayPrice.current) % 1).toFixed(2).slice(2)} ₾
                                         </span>
                                       </div>
                                     </div>
-
-                                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white transition-all duration-300 group-hover:w-[100px] group-hover:bg-emerald-700">
-                                      <span className="absolute opacity-0 transition-opacity duration-300 group-hover:opacity-100 text-[11px] font-bold tracking-wide">
-                                        VIEW
-                                      </span>
-                                      <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-7" />
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm transition-all duration-300 group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:scale-105">
+                                      <ArrowRight size={16} />
                                     </div>
                                   </div>
+
+                                  {inStock ? (
+                                    <motion.button
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleAddToCart(product);
+                                      }}
+                                      disabled={loadingProductId === product.id}
+                                      className="mt-3 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-xs font-black uppercase tracking-[0.16em] text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                                      whileTap={{ scale: 0.97 }}
+                                    >
+                                      {loadingProductId === product.id ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                          {tp.addToCart}
+                                        </>
+                                      ) : (
+                                        <>
+                                          <ShoppingCart className="h-4 w-4" />
+                                          {tp.addToCart}
+                                        </>
+                                      )}
+                                    </motion.button>
+                                  ) : (
+                                    <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-center text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                                      {tp.outOfStock}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </Link>
@@ -935,7 +969,8 @@ export default function ProductPage() {
                       })}
                     </motion.div>
 
-                    <div className="mt-10 flex justify-center">
+                    {/* Pagination */}
+                    <div className="mt-16 flex justify-center">
                       <Pagination>
                         <PaginationPrevious
                           disabled={currentPage === 1}
@@ -947,11 +982,10 @@ export default function ProductPage() {
                         {pageNumbers.map((number) => (
                           <PaginationItem
                             key={number}
-                            className={`list-none rounded-full ${
-                              number === currentPage
-                                ? "border border-slate-900 bg-slate-900 text-white"
-                                : "bg-white text-slate-800"
-                            }`}
+                            className={`list-none rounded-full transition-all duration-300 ${number === currentPage
+                                ? "scale-110 border border-slate-900 bg-slate-900 text-white shadow-lg"
+                                : "bg-white text-slate-800 hover:bg-slate-100"
+                              }`}
                           >
                             <PaginationLink
                               href="#"
@@ -959,7 +993,7 @@ export default function ProductPage() {
                                 e.preventDefault();
                                 handlePageChange(number);
                               }}
-                              className="rounded-full px-4 py-2 transition hover:bg-slate-100"
+                              className="rounded-full px-4 py-2"
                             >
                               {number}
                             </PaginationLink>
@@ -981,23 +1015,28 @@ export default function ProductPage() {
           </div>
         </div>
 
+        {/* Mobile Filter Modal */}
         {mobileFiltersOpen && (
           <div className="fixed inset-0 z-50 lg:hidden">
             <div
-              className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/60 backdrop-blur-md"
               onClick={() => setMobileFiltersOpen(false)}
             />
-            <div className="absolute right-0 top-0 h-full w-full max-w-md overflow-y-auto rounded-l-[32px] border-l border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur-xl">
-              <div className="mb-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              className="absolute right-0 top-0 h-full w-full max-w-sm overflow-y-auto bg-white p-6 shadow-2xl"
+            >
+              <div className="mb-6 flex items-center justify-between">
                 <div>
-                  <h3 className="text-xl font-black text-slate-900">ფილტრები</h3>
-                  <p className="text-xs text-slate-500">მოკლე, სწრაფი და ზუსტი ფილტრაცია</p>
+                  <h3 className="text-2xl font-black text-slate-900">{tp.filter}</h3>
+                  <p className="text-xs text-slate-500">{tp.filterSubtitle}</p>
                 </div>
                 <button
                   onClick={() => setMobileFiltersOpen(false)}
-                  className="rounded-full bg-white p-2 text-slate-700 shadow-sm"
+                  className="rounded-full bg-slate-100 p-3 text-slate-700"
                 >
-                  <X size={18} />
+                  <X size={20} />
                 </button>
               </div>
 
@@ -1005,11 +1044,11 @@ export default function ProductPage() {
 
               <button
                 onClick={() => setMobileFiltersOpen(false)}
-                className="mt-4 w-full rounded-2xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800"
+                className="mt-6 w-full rounded-2xl bg-slate-900 py-4 text-sm font-bold text-white shadow-xl"
               >
-                დასრულება
+                {tp.done}
               </button>
-            </div>
+            </motion.div>
           </div>
         )}
       </div>

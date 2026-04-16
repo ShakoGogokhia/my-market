@@ -17,6 +17,8 @@ import {
   Phone,
   Zap,
   ShoppingCart,
+  ArrowRight,
+  Eye,
 } from "lucide-react";
 import Login from "./auth/login";
 import Register from "./auth/register";
@@ -725,21 +727,32 @@ export default function Welcome() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {loading
                     ? Array.from({ length: 8 }).map((_, i) => (
                       <div
                         key={i}
-                        className="animate-pulse overflow-hidden rounded-[22px] border border-gray-200 bg-white shadow-sm"
+                        className="animate-pulse overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]"
                       >
-                        <div className="border-b border-gray-100 bg-gradient-to-br from-gray-50 to-slate-100 p-5">
-                          <div className="h-[190px] w-full rounded-xl bg-gray-200" />
+                        <div className="relative aspect-square overflow-hidden rounded-[1.6rem] border border-slate-100 bg-gradient-to-b from-slate-50 to-white">
+                          <div className="absolute inset-3 rounded-full bg-slate-200/70 blur-2xl" />
+                          <div className="absolute inset-0 p-6">
+                            <div className="h-full w-full rounded-[1.2rem] bg-slate-200" />
+                          </div>
                         </div>
-                        <div className="p-4">
-                          <div className="mb-3 h-5 w-3/4 rounded bg-gray-200" />
-                          <div className="mb-2 h-4 w-1/2 rounded bg-gray-100" />
-                          <div className="mb-4 h-6 w-24 rounded bg-gray-200" />
-                          <div className="h-10 w-full rounded-xl bg-gray-200" />
+                        <div className="px-3.5 py-3.5">
+                          <div className="mb-3 space-y-2">
+                            <div className="h-3 w-20 rounded bg-slate-200" />
+                            <div className="h-5 w-full rounded bg-slate-200" />
+                            <div className="h-4 w-24 rounded-full bg-slate-100" />
+                          </div>
+                          <div className="flex items-end justify-between border-t border-slate-100 pt-3">
+                            <div className="space-y-2">
+                              <div className="h-3 w-14 rounded bg-slate-100" />
+                              <div className="h-6 w-24 rounded bg-slate-200" />
+                            </div>
+                            <div className="h-9 w-9 rounded-2xl border border-slate-200 bg-white" />
+                          </div>
                         </div>
                       </div>
                     ))
@@ -762,6 +775,13 @@ export default function Welcome() {
 
                       const oldPrice =
                         hasNewPrice || hasDiscounted ? originalPrice : null;
+                      const discount =
+                        oldPrice && oldPrice > 0
+                          ? Math.max(
+                              0,
+                              Math.floor(((oldPrice - finalPrice) / oldPrice) * 100)
+                            )
+                          : 0;
 
                       const imageUrl =
                         Array.isArray(product.images) && product.images.length
@@ -780,81 +800,82 @@ export default function Welcome() {
                           className="group block h-full"
                         >
                           <motion.div
-                            className="flex h-full min-h-[470px] flex-col overflow-hidden rounded-[22px] border border-gray-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl"
+                            className="relative flex h-full min-h-[340px] flex-col overflow-hidden rounded-[2rem] border border-slate-100 bg-white p-2.5 shadow-[0_8px_24px_rgba(15,23,42,0.04)] transition-all duration-500 hover:-translate-y-1 hover:border-emerald-100 hover:shadow-[0_20px_44px_-18px_rgba(15,23,42,0.14)]"
                             variants={itemVariants}
                             initial="hidden"
                             animate="visible"
                             whileHover="hover"
                           >
-                            <div className="relative overflow-hidden border-b border-gray-100 bg-gradient-to-br from-gray-50 to-slate-100 p-5">
-                              <div className="absolute left-3 top-3 z-10 flex flex-wrap gap-2">
-                                {product.brand && (
-                                  <span className="rounded-full border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-bold text-gray-700 shadow-sm">
-                                    {product.brand}
+                            <div className="relative aspect-[1/1] overflow-hidden rounded-[1.6rem] border border-slate-100 bg-gradient-to-b from-slate-50 to-white">
+                              <div className="absolute inset-x-2.5 top-2.5 z-20 flex items-start justify-between">
+                                <div className={`flex items-center gap-1 rounded-full border px-2.5 py-1 shadow-sm backdrop-blur-md ${product.in_stock > 0 ? "border-emerald-100 bg-white/90 text-emerald-700" : "border-slate-200 bg-white/90 text-slate-500"
+                                  }`}>
+                                  <div className={`h-1.5 w-1.5 rounded-full ${product.in_stock > 0 ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+                                  <span className="text-[9px] font-bold uppercase tracking-wide">
+                                    {product.in_stock > 0 ? t("body.energy.inStock") : t("body.energy.outOfStock")}
                                   </span>
-                                )}
+                                </div>
 
-                                {(hasNewPrice || hasDiscounted) && (
-                                  <span className="rounded-full bg-red-500 px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
-                                    SALE
-                                  </span>
+                                {discount > 0 && (
+                                  <div className="rounded-full bg-emerald-600 px-2.5 py-1 text-[9px] font-black text-white shadow-lg shadow-emerald-200/40">
+                                    -{discount}%
+                                  </div>
                                 )}
                               </div>
 
-                              <div className="flex min-h-[210px] items-center justify-center pt-6">
+                              <div className="flex h-full w-full items-center justify-center p-6 transition-transform duration-700 ease-out group-hover:scale-[1.04]">
                                 <img
                                   src={imageUrl}
                                   alt={product.name}
-                                  className="max-h-[190px] w-full object-contain transition duration-500 group-hover:scale-105"
+                                  className="h-full w-full object-contain drop-shadow-xl"
                                 />
+                              </div>
+
+                              <div className="absolute inset-0 flex items-center justify-center bg-slate-900/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+                                <div className="flex items-center gap-2 translate-y-4 rounded-full border border-slate-200 bg-white/95 px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-slate-900 shadow-2xl transition-transform duration-500 group-hover:translate-y-0">
+                                  <Eye size={13} />
+                                  {t("body.energy.view")}
+                                </div>
                               </div>
                             </div>
 
-                            <div className="flex flex-1 flex-col p-4">
-                              <div className="mb-3">
-                                <h3 className="line-clamp-2 min-h-[52px] text-[17px] font-black leading-6 text-gray-900">
+                            <div className="flex flex-1 flex-col px-3.5 py-3.5">
+                              <div className="mb-3 space-y-2">
+                                {product.brand && (
+                                  <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-emerald-600/80">
+                                    {product.brand}
+                                  </span>
+                                )}
+                                <h3 className="line-clamp-2 text-[15px] font-extrabold leading-5 text-slate-900 transition-colors group-hover:text-emerald-700">
                                   {product.name}
                                 </h3>
-
-                                <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-500">
-                                  {product.category && (
-                                    <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">
-                                      {t(`categories.${product.category}`, {
-                                        defaultValue: product.category,
-                                      })}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="mb-4">
-                                {oldPrice ? (
-                                  <div className="flex flex-wrap items-end gap-2">
-                                    <span className="text-sm font-medium text-gray-400 line-through">
-                                      {oldPrice.toFixed(2)} ₾
-                                    </span>
-                                    <span className="text-2xl font-black tracking-tight text-emerald-700">
-                                      {finalPrice.toFixed(2)} ₾
-                                    </span>
-                                  </div>
-                                ) : (
-                                  <span className="text-2xl font-black tracking-tight text-gray-900">
-                                    {finalPrice.toFixed(2)} ₾
-                                  </span>
+                                {product.code && (
+                                  <p className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-500">
+                                    ID: {product.code}
+                                  </p>
                                 )}
                               </div>
 
-                              <div className="mb-4">
-                                <span
-                                  className={`inline-flex rounded-full px-3 py-1 text-[11px] font-bold ${product.in_stock > 0
-                                    ? "bg-emerald-100 text-emerald-700"
-                                    : "bg-red-100 text-red-700"
-                                    }`}
-                                >
-                                  {product.in_stock > 0
-                                    ? t("body.energy.inStock")
-                                    : t("body.energy.outOfStock")}
-                                </span>
+                              <div className="mt-auto flex items-end justify-between border-t border-slate-100 pt-3">
+                                <div className="flex flex-col">
+                                  {oldPrice ? (
+                                    <span className="text-[11px] font-semibold text-slate-400 line-through">
+                                      {oldPrice.toFixed(2)} ₾
+                                    </span>
+                                  ) : null}
+                                  <div className="flex items-baseline gap-1 text-slate-900">
+                                    <span className="text-xl font-black tracking-tight">
+                                      {Math.floor(finalPrice)}
+                                    </span>
+                                    <span className="text-xs font-bold text-slate-500">
+                                      .{Number(finalPrice % 1).toFixed(2).slice(2)} ₾
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="flex h-9 w-9 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm transition-all duration-300 group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700 group-hover:scale-105">
+                                  <ArrowRight size={16} />
+                                </div>
                               </div>
 
                               {product.in_stock > 0 ? (
@@ -865,13 +886,13 @@ export default function Welcome() {
                                     handleAddToCart(product);
                                   }}
                                   disabled={loadingProductId === product.id}
-                                  className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
-                                  whileTap={{ scale: 0.95 }}
+                                  className="mt-3 inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-xs font-black uppercase tracking-[0.16em] text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                                  whileTap={{ scale: 0.97 }}
                                 >
                                   {loadingProductId === product.id ? (
                                     <>
                                       <Loader2 className="h-4 w-4 animate-spin" />
-                                      იტვირთება...
+                                      {t("body.energy.addToCart")}
                                     </>
                                   ) : (
                                     <>
@@ -881,70 +902,8 @@ export default function Welcome() {
                                   )}
                                 </motion.button>
                               ) : (
-                                <div className="mt-auto space-y-3">
-                                  <div className="flex items-center justify-center gap-3 rounded-xl border border-gray-200 bg-gray-50 p-2.5">
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        updatePreOrderQty(product.id, -1);
-                                      }}
-                                      className="rounded-full bg-white p-2 shadow-sm transition hover:bg-gray-100"
-                                    >
-                                      -
-                                    </button>
-
-                                    <span className="min-w-[32px] text-center text-sm font-black text-gray-900">
-                                      {product.preorder_qty ?? 1}
-                                    </span>
-
-                                    <button
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        updatePreOrderQty(product.id, 1);
-                                      }}
-                                      className="rounded-full bg-white p-2 shadow-sm transition hover:bg-gray-100"
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-
-                                  <motion.button
-                                    onClick={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-
-                                      if (!isLoggedIn) {
-                                        toast.error(
-                                          "გთხოვთ, გაიაროთ ავტორიზაცია წინასწარი შეკვეთისთვის"
-                                        );
-                                        return;
-                                      }
-
-                                      handlePreOrder(product, product.preorder_qty ?? 1);
-                                    }}
-                                    disabled={
-                                      loadingProductId === product.id ||
-                                      product.already_preordered
-                                    }
-                                    className={`w-full rounded-xl px-4 py-3 text-sm font-bold text-white transition ${product.already_preordered
-                                      ? "cursor-not-allowed bg-gray-400"
-                                      : "bg-amber-500 shadow-md hover:bg-amber-600"
-                                      }`}
-                                    whileTap={{ scale: 0.95 }}
-                                  >
-                                    {loadingProductId === product.id ? (
-                                      <span className="inline-flex items-center gap-2">
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        იტვირთება...
-                                      </span>
-                                    ) : product.already_preordered ? (
-                                      t("body.energy.alreadyPreOrdered")
-                                    ) : (
-                                      t("body.energy.preOrderButton")
-                                    )}
-                                  </motion.button>
+                                <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-center text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                                  {t("body.energy.outOfStock")}
                                 </div>
                               )}
                             </div>

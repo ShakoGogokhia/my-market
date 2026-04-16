@@ -31,6 +31,7 @@ type ProductType = {
   name: string;
   code?: string;
   brand?: string;
+  warranty?: string;
   category?: string;
   description?: string;
   image?: string | { url?: string } | null;
@@ -299,27 +300,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             <div className="xl:sticky xl:top-6 xl:self-start">
               <div className="overflow-hidden rounded-[34px] border border-white/60 bg-white/90 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur">
                 <div className="border-b border-gray-100 p-6 sm:p-8">
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {localProduct.brand && (
-                      <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-bold text-gray-700">
-                        {localProduct.brand}
-                      </span>
-                    )}
-
-                    {localProduct.category && (
-                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-                        {t(`categories.${localProduct.category}`, {
-                          defaultValue: localProduct.category,
-                        })}
-                      </span>
-                    )}
-
-                    {displayPrice.hasDiscount && (
-                      <span className="rounded-full bg-red-500 px-3 py-1 text-xs font-bold text-white">
-                        SALE
-                      </span>
-                    )}
-                  </div>
+       
 
                   <h1 className="text-3xl font-black leading-tight tracking-tight text-gray-900 sm:text-4xl">
                     {localProduct.name}
@@ -328,6 +309,18 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                   {localProduct.code && (
                     <p className="mt-3 text-sm font-medium text-gray-500">
                       კოდი: {localProduct.code}
+                    </p>
+                  )}
+
+                  {localProduct.brand && (
+                    <p className="mt-2 text-sm font-medium text-gray-500">
+                      ბრენდი: {localProduct.brand}
+                    </p>
+                  )}
+
+                  {localProduct.warranty && (
+                    <p className="mt-2 text-sm font-medium text-gray-500">
+                      გარანტია: {localProduct.warranty}
                     </p>
                   )}
 
@@ -451,15 +444,8 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
 
                         handlePreOrder(localProduct);
                       }}
-                      disabled={
-                        loadingPreOrderId === localProduct.id ||
-                        Boolean(localProduct.already_preordered)
-                      }
-                      className={`inline-flex w-full items-center justify-center gap-2 rounded-2xl px-6 py-4 text-base font-bold text-white shadow-lg transition ${
-                        localProduct.already_preordered
-                          ? "cursor-not-allowed bg-gray-400"
-                          : "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600"
-                      }`}
+                      disabled={loadingPreOrderId === localProduct.id}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 px-6 py-4 text-base font-bold text-white shadow-lg transition hover:from-amber-600 hover:to-yellow-600 disabled:cursor-not-allowed disabled:opacity-70"
                       whileTap={{ scale: 0.98 }}
                     >
                       {loadingPreOrderId === localProduct.id ? (

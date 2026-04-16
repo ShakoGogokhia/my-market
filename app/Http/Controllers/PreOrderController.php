@@ -29,10 +29,21 @@ class PreOrderController extends Controller
 
         $product = Product::findOrFail($validated['product_id']);
 
-        if ($product->stock > 0) {
+        if ((int) $product->in_stock > 0) {
             return response()->json([
-                'error' => 'პროდუქტი საწყობშია და წინასწარი შეკვეთა საჭირო არ არის.'
+                'message' => 'პროდუქტი საწყობშია და წინასწარი შეკვეთა საჭირო არ არის.'
             ], 400);
+        }
+
+        $existingPreOrder = PreOrder::where('user_id', Auth::id())
+            ->where('product_id', $validated['product_id'])
+            ->latest()
+            ->first();
+
+        if ($existingPreOrder) {
+            return response()->json([
+                'message' => 'თქვენ ამ პროდუქტზე უკვე გააკეთეთ წინასწარი შეკვეთა.'
+            ], 409);
         }
 
         $preOrder = \App\Models\PreOrder::create([

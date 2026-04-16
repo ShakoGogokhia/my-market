@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { FaTrash, FaMinus, FaPlus } from "react-icons/fa";
 import axios from "axios";
 import { Toaster, toast } from "sonner";
-import { router } from "@inertiajs/react";
 import { usePage, useForm } from "@inertiajs/react";
 import { useTranslation } from "@/translation";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,6 @@ import { Label } from "@/components/ui/label";
 import { LoaderCircle } from "lucide-react";
 import {
   Breadcrumb,
-  BreadcrumbEllipsis,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
@@ -21,8 +19,6 @@ import {
 } from "@/components/ui/breadcrumb";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-import LoginPage from "../auth/login.tsx";
-import RegisterPage from "../auth/register.tsx";
 import PromocodeInput from "../authComponents/promoCode.tsx";
 import { Button } from "@/components/ui/button";
 type LoginForm = {
@@ -32,7 +28,6 @@ type LoginForm = {
 };
 
 interface LoginProps {
-  status?: string;
   canResetPassword: boolean;
 }
 type RegisterForm = {
@@ -48,7 +43,7 @@ type RegisterForm = {
   organization_location?: string;
 };
 
-export default function Cart({ status, canResetPassword }: LoginProps) {
+export default function Cart({ canResetPassword }: LoginProps) {
   const { t } = useTranslation();
 
   const {
@@ -102,90 +97,8 @@ export default function Cart({ status, canResetPassword }: LoginProps) {
   };
   const [cartItems, setCartItems] = useState([]);
   const [appliedCode, setAppliedCode] = useState("");
-  const [activeTab, setActiveTab] = useState("login");
   const [showTabs, setShowTabs] = useState(false);
-  const [discountPercent, setDiscountPercent] = useState<number>(0);
-  const [discountAmount, setDiscountAmount] = useState<number>(0);
-  const [errorMessage, setErrorMessage] = useState("");
   const [discount, setDiscount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [showAuthDropdown, setShowAuthDropdown] = useState(false);
-  const [code, setCode] = useState("");
-  const handleApply = async () => {
-    if (!code.trim()) {
-      toast.warning("გთხოვთ, შეიყვანეთ პრომოკოდი");
-      return;
-    }
-    if (appliedCode && appliedCode !== code.trim()) {
-      setAppliedCode(null);
-      setDiscount(0);
-    }
-    setLoading(true);
-
-    try {
-      const res = await axios.post("/apply-promocode", { code: code.trim() });
-      setErrorMessage("");
-      if (!res || !res.data || !res.data.discounted_amount) {
-        throw new Error("დამუშავების შეცდომა");
-      }
-
-      const { discounted_amount } = res.data;
-
-      setDiscount(discounted_amount);
-      localStorage.setItem(
-        "promoDiscount",
-        JSON.stringify({
-          code: code.trim(),
-          discountAmount: discounted_amount,
-        })
-      );
-      setAppliedCode(code.trim());
-      const savedCart = localStorage.getItem("cartItems");
-      if (savedCart) {
-        const parsedCart = JSON.parse(savedCart);
-
-        const totalAmount = parsedCart.reduce(
-          (acc, item) => acc + parseFloat(item.price) * item.quantity,
-          0
-        );
-
-        const updatedCart = parsedCart.map((item) => {
-          const itemTotal = parseFloat(item.price) * item.quantity;
-          const itemDiscount = (itemTotal / totalAmount) * discounted_amount;
-          const discountedPricePerUnit =
-            (itemTotal - itemDiscount) / item.quantity;
-
-          return {
-            ...item,
-            applied_promocode: code.trim(),
-            price: Number(discountedPricePerUnit.toFixed(2)),
-            oldPrice: Number(item.oldPrice || parseFloat(item.price)),
-            quantity: Number(item.quantity),
-          };
-        });
-
-        localStorage.setItem("cartItems", JSON.stringify(updatedCart));
-        setCartItems(updatedCart);
-      }
-      toast.success(
-        `წარმატებით გამოყენებულია კოდი: ${code.trim()}(-${discounted_amount} ₾)`
-      );
-      setTimeout(() => {
-        console.log("🌀 about to hard‑reload cart page");
-        window.location.href =
-          window.location.pathname + window.location.search;
-      }, 300);
-    } catch (err) {
-      const msg =
-        err.response?.data?.message ||
-        err.message ||
-        "პრომოკოდი არასწორია ან ვადაგასულია";
-      setErrorMessage(msg);
-      toast.error(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const updateQuantity = (index, delta) => {
     const updated = [...cartItems];
@@ -239,7 +152,6 @@ export default function Cart({ status, canResetPassword }: LoginProps) {
 
   const { auth } = usePage().props;
   const isAuthenticated = !!auth?.user;
-  const userPromo = auth.user?.applied_promocode;
 
   const handleOrder = () => {
     if (!auth?.user) {
@@ -258,7 +170,7 @@ export default function Cart({ status, canResetPassword }: LoginProps) {
     };
     axios
       .post("/place-order", orderData)
-      .then((response) => {
+      .then(() => {
         localStorage.removeItem("cartItems");
         localStorage.removeItem("promoDiscount");
         setAppliedCode("");
@@ -319,8 +231,7 @@ export default function Cart({ status, canResetPassword }: LoginProps) {
       console.log("Total before discount:", totalBefore);
       console.log("Calculated discount amount:", discountAmt);
 
-      setDiscountAmount(discountAmt);
-      setDiscountPercent(percent);
+      setDiscount(discountAmt);
       localStorage.setItem(
         "promoDiscount",
         JSON.stringify({
@@ -340,8 +251,7 @@ export default function Cart({ status, canResetPassword }: LoginProps) {
       });
 
     } else {
-      setDiscountAmount(0);
-      setDiscountPercent(0);
+      setDiscount(0);
       setAppliedCode(null);
       localStorage.removeItem("promoDiscount");
     }
@@ -353,10 +263,11 @@ export default function Cart({ status, canResetPassword }: LoginProps) {
   return (
     <>
       <Header />
-      <div className="max-w-screen-lg mx-auto mt-10 p-4 bg-white shadow rounded-lg flex flex-col lg:flex-row gap-8 mb-10">
-        <Toaster />
-        <div className="flex-1  max-h-[700px] overflow-y-auto pr-2">
-          <Breadcrumb className="mb-10">
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.08),_transparent_24%),linear-gradient(to_bottom,_#f8fafc,_#ffffff,_#f8fafc)]">
+        <div className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8">
+          <Toaster />
+
+          <Breadcrumb className="mb-8">
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink href="/">
@@ -369,132 +280,182 @@ export default function Cart({ status, canResetPassword }: LoginProps) {
               </BreadcrumbItem>
             </BreadcrumbList>
           </Breadcrumb>
-          <h2 className="text-2xl font-bold mb-4">{t("body.cart.title")}</h2>
-          {cartItems.length === 0 ? (
-            <p>{t("body.cart.empty")}</p>
-          ) : (
-            <ul className="space-y-6">
-              {cartItemsWithDiscount.map((item, index) => (
-                <li key={index} className="flex gap-4 border-b pb-4">
-                  <img
-                    src={
-                      Array.isArray(item.images) && item.images.length > 0
-                        ? typeof item.images[0] === "string"
-                          ? item.images[0]
-                          : item.images[0]?.url ?? ""
-                        : typeof item.image === "string"
-                        ? item.image
-                        : item.image?.url ?? ""
-                    }
-                    alt={`${item.name}-${index + 1}`}
-                    className="w-20 h-20 object-contain border rounded bg-gray-50"
-                  />
-                  <div className="flex-1">
-                    <h3 className="font-semibold">{item.name}</h3>
-                    <p className="text-sm text-gray-500">{item.model}</p>
-                    <div className="flex items-center mt-2 space-x-3">
-                      <button
-                        onClick={() => updateQuantity(index, -1)}
-                        className="p-1 bg-gray-200 rounded"
-                      >
-                        <FaMinus size={12} />
-                      </button>
-                      <span className="w-8 text-center">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(index, 1)}
-                        className="p-1 bg-gray-200 rounded"
-                      >
-                        <FaPlus size={12} />
-                      </button>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg">
-                      {discount > 0
-                        ? item.discountedTotal.toFixed(2)
-                        : (item.price * item.quantity).toFixed(2)}{" "}
-                      ₾
+
+          <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <div className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+              <div className="border-b border-slate-100 px-6 py-5 sm:px-8">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="text-2xl font-black tracking-tight text-slate-900">
+                      {t("body.cart.title")}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {cartItems.reduce((acc, item) => acc + item.quantity, 0)} {t("body.cart.items")}
                     </p>
-                    {item.oldPrice > item.price && (
-                      <p className="text-sm text-gray-400 line-through">
-                        {(item.oldPrice * item.quantity).toFixed(2)} ₾
-                      </p>
-                    )}
-
-                    <button
-                      onClick={() => removeItem(index)}
-                      className="text-red-500 mt-2 hover:text-red-700"
-                    >
-                      <FaTrash />
-                    </button>
                   </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+                  <div className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
+                    {cartItems.length} {t("body.cart.items")}
+                  </div>
+                </div>
+              </div>
 
-        <div className="w-full lg:w-80 bg-gray-100 p-6 rounded-lg shadow">
-          <h3 className="text-lg font-bold mb-4">{t("body.cart.summary")}</h3>
-          <div className="flex justify-between">
-            <span>{t("body.cart.savings")}</span>
-            <span className="text-green-600 font-semibold">
-              {cartItems
-                .reduce(
-                  (acc, item) =>
-                    acc +
-                    ((item.oldPrice || item.price) - item.price) *
-                      item.quantity,
-                  0
-                )
-                .toFixed(2)}{" "}
-              ₾
-            </span>
-          </div>
+              <div className="p-4 sm:p-6">
+                {cartItems.length === 0 ? (
+                  <div className="rounded-[28px] border border-dashed border-slate-300 bg-slate-50 px-6 py-20 text-center">
+                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
+                      <FaTrash />
+                    </div>
+                    <h3 className="text-xl font-black text-slate-900">{t("body.cart.empty")}</h3>
+                    <p className="mx-auto mt-2 max-w-md text-sm leading-7 text-slate-500">
+                      {t("body.cart.emptyOrderError")}
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="space-y-4">
+                    {cartItemsWithDiscount.map((item, index) => (
+                      <li
+                        key={index}
+                        className="group flex flex-col gap-4 rounded-[24px] border border-slate-100 bg-slate-50 p-4 transition hover:border-emerald-200 hover:bg-white sm:flex-row sm:items-center"
+                      >
+                        <div className="flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-white p-2 shadow-sm">
+                          <img
+                            src={
+                              Array.isArray(item.images) && item.images.length > 0
+                                ? typeof item.images[0] === "string"
+                                  ? item.images[0]
+                                  : item.images[0]?.url ?? ""
+                                : typeof item.image === "string"
+                                ? item.image
+                                : item.image?.url ?? ""
+                            }
+                            alt={`${item.name} image`}
+                            className="h-full w-full object-contain"
+                          />
+                        </div>
 
-          <div className="flex justify-between mb-2">
-            <span>{t("body.cart.items")}</span>
-            <span>
-              {cartItems.reduce((acc, item) => acc + item.quantity, 0)}
-            </span>
-          </div>
-          <div className="flex justify-between mb-2">
-            <span>{t("body.cart.total")}</span>
-            <span className="text-lg font-bold">
-              {discountedTotal.toFixed(2)} ₾
-            </span>
-          </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0">
+                              <h3 className="truncate text-lg font-bold text-slate-900">{item.name}</h3>
+                              <p className="mt-1 text-sm text-slate-500">{item.model}</p>
+                            </div>
+                            <div className="text-left lg:text-right">
+                              <p className="text-xl font-black text-slate-900">
+                                {discount > 0
+                                  ? item.discountedTotal.toFixed(2)
+                                  : (item.price * item.quantity).toFixed(2)} {" "}
+                                ₾
+                              </p>
+                              {item.oldPrice > item.price && (
+                                <p className="text-sm text-slate-400 line-through">
+                                  {(item.oldPrice * item.quantity).toFixed(2)} ₾
+                                </p>
+                              )}
+                            </div>
+                          </div>
 
-          <button
-            onClick={handleOrder}
-            disabled={isPlacingOrder}
-            className="w-full bg-green-700 text-white py-2 rounded hover:bg-green-700 transition flex justify-center items-center"
-          >
-            {isPlacingOrder ? (
-              <svg
-                className="w-4 h-4 animate-spin cursor-pointer"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25 cursor-pointer"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75 cursor-pointer"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
-                ></path>
-              </svg>
-            ) : (
-              t("body.cart.orderButton")
-            )}
-          </button>
-          <PromocodeInput onApply={handlePromoApply} />
+                          <div className="mt-4 flex flex-wrap items-center gap-3">
+                            <div className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                              <button
+                                onClick={() => updateQuantity(index, -1)}
+                                className="rounded-full border border-slate-200 bg-slate-50 p-2 text-slate-700 transition hover:bg-slate-100"
+                              >
+                                <FaMinus size={12} />
+                              </button>
+                              <span className="min-w-8 text-center text-sm font-bold text-slate-900">
+                                {item.quantity}
+                              </span>
+                              <button
+                                onClick={() => updateQuantity(index, 1)}
+                                className="rounded-full border border-slate-200 bg-slate-50 p-2 text-slate-700 transition hover:bg-slate-100"
+                              >
+                                <FaPlus size={12} />
+                              </button>
+                            </div>
+
+                            <button
+                              onClick={() => removeItem(index)}
+                              className="inline-flex items-center gap-2 rounded-2xl border border-red-100 bg-red-50 px-3 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-100"
+                            >
+                              <FaTrash />
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="xl:sticky xl:top-6 xl:self-start">
+              <div className="overflow-hidden rounded-[32px] border border-slate-100 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
+                <div className="border-b border-slate-100 bg-slate-50 px-6 py-5">
+                  <h3 className="text-lg font-black tracking-tight text-slate-900">
+                    {t("body.cart.summary")}
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-500">{t("body.cart.orderButton")}</p>
+                </div>
+
+                <div className="space-y-4 p-6">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">{t("body.cart.savings")}</span>
+                    <span className="font-semibold text-emerald-700">
+                      {cartItems
+                        .reduce(
+                          (acc, item) =>
+                            acc +
+                            ((item.oldPrice || item.price) - item.price) *
+                              item.quantity,
+                          0
+                        )
+                        .toFixed(2)} {" "}
+                      ₾
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-500">{t("body.cart.items")}</span>
+                    <span className="font-semibold text-slate-900">
+                      {cartItems.reduce((acc, item) => acc + item.quantity, 0)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-end justify-between rounded-3xl bg-slate-50 px-4 py-4">
+                    <span className="text-sm font-semibold text-slate-600">
+                      {t("body.cart.total")}
+                    </span>
+                    <span className="text-3xl font-black tracking-tight text-slate-900">
+                      {discountedTotal.toFixed(2)} ₾
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={handleOrder}
+                    disabled={isPlacingOrder}
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-4 text-base font-bold text-white shadow-lg transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {isPlacingOrder ? (
+                      <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"
+                        />
+                      </svg>
+                    ) : null}
+                    {t("body.cart.orderButton")}
+                  </button>
+
+                  <div className="rounded-3xl border border-slate-100 bg-slate-50 p-4">
+                    <PromocodeInput onApply={handlePromoApply} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
       {!isAuthenticated && (
@@ -900,3 +861,4 @@ export default function Cart({ status, canResetPassword }: LoginProps) {
     </>
   );
 }
+
