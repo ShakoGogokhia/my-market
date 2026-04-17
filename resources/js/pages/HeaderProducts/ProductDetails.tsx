@@ -139,6 +139,15 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     };
   }, [localProduct]);
 
+  const discountPercent = useMemo(() => {
+    const original = Number(displayPrice.old || 0);
+    const current = Number(displayPrice.current || 0);
+
+    if (!original || current >= original) return 0;
+
+    return Math.round(((original - current) / original) * 100);
+  }, [displayPrice.current, displayPrice.old]);
+
   const inStock = Number(localProduct.in_stock) > 0;
 
   const prevImg = () => {
@@ -300,7 +309,22 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             <div className="xl:sticky xl:top-6 xl:self-start">
               <div className="overflow-hidden rounded-[34px] border border-white/60 bg-white/90 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur">
                 <div className="border-b border-gray-100 p-6 sm:p-8">
-       
+                  <div className="mb-4 flex flex-wrap gap-2">
+                    {localProduct.category && (
+                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+                        {t(`categories.${localProduct.category}`, {
+                          defaultValue: localProduct.category,
+                        })}
+                      </span>
+                    )}
+
+                    {discountPercent > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-gradient-to-r from-red-500 to-rose-500 px-3 py-1 text-xs font-extrabold text-white shadow-sm shadow-red-200/60">
+                        <BadgePercent size={14} />
+                        {discountPercent}% OFF
+                      </span>
+                    )}
+                  </div>
 
                   <h1 className="text-3xl font-black leading-tight tracking-tight text-gray-900 sm:text-4xl">
                     {localProduct.name}
@@ -325,13 +349,17 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                   )}
 
                   <div className="mt-6">
-                    {displayPrice.hasDiscount && displayPrice.old ? (
+                    {discountPercent > 0 && displayPrice.old ? (
                       <div className="flex flex-wrap items-end gap-3">
                         <span className="text-lg font-medium text-gray-400 line-through">
                           {displayPrice.old.toFixed(2)} ₾
                         </span>
                         <span className="text-4xl font-black tracking-tight text-emerald-700">
                           {displayPrice.current.toFixed(2)} ₾
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
+                          <BadgePercent size={14} />
+                          Save {discountPercent}%
                         </span>
                       </div>
                     ) : (

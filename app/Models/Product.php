@@ -27,6 +27,9 @@ class Product extends Model
         'description',
         'cost_price',
         'markup_percent',
+        'source',
+        'source_system',
+        'source_external_id',
     ];
 
     public function specifications()

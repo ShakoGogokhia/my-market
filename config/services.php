@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'billing_warehouse' => [
+        'url' => env('BILLING_WAREHOUSE_API_URL'),
+        'token' => env('BILLING_WAREHOUSE_API_TOKEN'),
+        'timeout' => (int) env('BILLING_WAREHOUSE_API_TIMEOUT', 10),
+    ],
+
+    'warehouse_sync' => [
+        'token' => env('WAREHOUSE_SYNC_API_TOKEN'),
+    ],
+
 ];

@@ -40,6 +40,10 @@ import {
 } from "../../components/ui/pagination";
 
 type ProductImage = string | { url?: string };
+type CategoryItem = {
+  name: string;
+  icon_url?: string | null;
+};
 
 type ProductType = {
   id: number;
@@ -64,7 +68,7 @@ export default function ProductPage() {
   const tp = t("body.energy");
 
   const [products, setProducts] = useState<ProductType[]>([]);
-  const [allCategories, setAllCategories] = useState<string[]>([]);
+  const [allCategories, setAllCategories] = useState<CategoryItem[]>([]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryQuery, setCategoryQuery] = useState("");
@@ -166,9 +170,10 @@ export default function ProductPage() {
   }, [products]);
 
   const translatedCategories = useMemo(() => {
-    return allCategories.map((key) => ({
-      key,
-      label: t(`categories.${key}`, { defaultValue: key }),
+    return allCategories.map((category) => ({
+      key: category.name,
+      label: t(`categories.${category.name}`, { defaultValue: category.name }),
+      iconUrl: category.icon_url || null,
     }));
   }, [allCategories, t]);
 
@@ -594,13 +599,31 @@ export default function ProductPage() {
                       );
                       setCurrentPage(1);
                     }}
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-sm transition ${active
+                    className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm transition ${
+                      active
                         ? "border border-emerald-200 bg-emerald-50 text-emerald-800"
                         : "text-slate-700 hover:bg-slate-50"
-                      }`}
+                    }`}
                   >
-                    <span>{cat.label}</span>
-                    {active && <span className="text-xs font-semibold text-emerald-700">{tp.selected}</span>}
+                    <span className="flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-white shadow-sm">
+                      {cat.iconUrl ? (
+                        <img
+                          src={cat.iconUrl}
+                          alt={cat.label}
+                          className="h-6 w-6 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <span className="text-slate-500">
+                          <Package size={18} />
+                        </span>
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-medium">{cat.label}</span>
+                    {active && (
+                      <span className="rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+                        {tp.selected}
+                      </span>
+                    )}
                   </button>
                 );
               })

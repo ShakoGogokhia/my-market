@@ -282,34 +282,55 @@ export default function Welcome() {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const intervalRef = useRef(null);
-  const carouselImages = [
+  const defaultCarouselImages = [
     "/images/CarouselIMG/generalis-webiscover.jpg",
     "/images/CarouselIMG/mymarketis-cover-1.jpg",
     "/images/CarouselIMG/generalis-3-coveri-chasasmeli.jpg",
     "/images/CarouselIMG/generalis-meore-coveri-chasasmeli.jpg",
   ];
+  const [carouselImages, setCarouselImages] = useState<string[]>(defaultCarouselImages);
+
+  useEffect(() => {
+    axios
+      .get("/carousel-images")
+      .then((res) => {
+        const images = Array.isArray(res.data?.carousel_images)
+          ? res.data.carousel_images
+              .map((item: { image_url?: string }) => item.image_url)
+              .filter((src: string | undefined): src is string => Boolean(src))
+          : [];
+
+        setCarouselImages(images.length > 0 ? images : defaultCarouselImages);
+      })
+      .catch(() => setCarouselImages(defaultCarouselImages));
+  }, []);
 
   const startAutoSlide = () => {
+    if (carouselImages.length < 2) return;
     intervalRef.current = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % carouselImages.length);
     }, 3000);
   };
   const resetInterval = () => {
-    clearInterval(intervalRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
     startAutoSlide();
   };
 
   useEffect(() => {
     startAutoSlide();
-    return () => clearInterval(intervalRef.current);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [carouselImages.length]);
 
   const handleNext = () => {
+    if (carouselImages.length === 0) return;
     setCurrentIndex((prevIndex) => (prevIndex + 1) % carouselImages.length);
     resetInterval();
   };
 
   const handlePrev = () => {
+    if (carouselImages.length === 0) return;
     setCurrentIndex(
       (prevIndex) =>
         (prevIndex - 1 + carouselImages.length) % carouselImages.length
@@ -513,29 +534,42 @@ export default function Welcome() {
             <div className="w-full    p-6 text-gray-900 ">
               <div
                 ref={searchRef}
-                className="relative flex items-center justify-end w-full"
+                className="relative flex w-full justify-end"
               >
-                <div className="relative flex items-center">
+                <div className="relative flex items-center gap-3 rounded-full border border-white/60 bg-white/75 px-2 py-2 shadow-[0_18px_45px_rgba(15,23,42,0.12)] backdrop-blur-xl">
                   <AnimatePresence>
                     {searchOpen && (
-                      <motion.input
-                        initial={{ width: 0, opacity: 0 }}
-                        animate={{ width: 250, opacity: 1 }}
-                        exit={{ width: 0, opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        type="text"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        placeholder={t("body.energy.searchInProduct")}
-                        className="p-3 pl-4 pr-10 rounded-full border border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 absolute right-12 bg-white"
-                        style={{ zIndex: 10 }}
-                      />
+                      <motion.div
+                        initial={{ width: 0, opacity: 0, x: 16 }}
+                        animate={{ width: "min(26rem, calc(100vw - 7rem))", opacity: 1, x: 0 }}
+                        exit={{ width: 0, opacity: 0, x: 16 }}
+                        transition={{ duration: 0.28, ease: "easeOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="relative">
+                          <IoSearch className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-emerald-500" />
+                          <input
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder={t("body.energy.searchInProduct")}
+                            className="h-12 w-full rounded-full border border-slate-200 bg-white pl-11 pr-4 text-sm font-medium text-slate-900 shadow-inner outline-none transition placeholder:text-slate-400 focus:border-emerald-300 focus:ring-4 focus:ring-emerald-100"
+                            style={{ zIndex: 10 }}
+                            autoComplete="off"
+                          />
+                        </div>
+                      </motion.div>
                     )}
                   </AnimatePresence>
 
                   <button
                     onClick={() => setSearchOpen((prev) => !prev)}
-                    className="w-10 h-10 rounded-full bg-green-600 hover:bg-green-700 text-white flex items-center justify-center transition-shadow shadow-md z-20"
+                    aria-label="Toggle search"
+                    className={`flex h-12 w-12 items-center justify-center rounded-full text-white transition-all duration-300 ${
+                      searchOpen
+                        ? "bg-slate-900 shadow-[0_14px_30px_rgba(15,23,42,0.22)]"
+                        : "bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-[0_14px_30px_rgba(16,185,129,0.28)] hover:scale-105 hover:from-emerald-600 hover:to-emerald-700"
+                    }`}
                   >
                     <IoSearch size={20} />
                   </button>
@@ -544,19 +578,32 @@ export default function Welcome() {
                 <AnimatePresence>
                   {searchOpen && searchTerm && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.25 }}
-                      className="
-             absolute top-16 right-0
-             w-[calc(100%-2rem)] sm:w-[400px] lg:w-[600px]
-             bg-white/90 backdrop-blur-md rounded-xl shadow-lg
-             max-h-[60vh] overflow-y-auto
-             p-4
-             z-30
-           "
+                      initial={{ opacity: 0, y: 16, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                      transition={{ duration: 0.22, ease: "easeOut" }}
+                      className="absolute right-0 top-16 z-30 max-h-[60vh] w-[calc(100vw-2rem)] overflow-y-auto rounded-[1.5rem] border border-slate-200 bg-white/95 p-4 shadow-[0_24px_70px_rgba(15,23,42,0.16)] backdrop-blur-xl sm:w-[400px] lg:w-[640px]"
                     >
+                      <div className="mb-4 rounded-[1.35rem] border border-emerald-100 bg-gradient-to-r from-emerald-50 via-white to-slate-50 px-4 py-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-600">
+                              {t("body.energy.searchResults")}
+                            </p>
+                            <p className="mt-1 text-sm font-medium text-slate-700">
+                              {t("body.energy.searchResultsFound").replace(
+                                "{count}",
+                                String(filteredProducts.length)
+                              )}
+                            </p>
+                          </div>
+
+                          <div className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm ring-1 ring-slate-100">
+                            {searchTerm.trim() || t("body.energy.allProducts")}
+                          </div>
+                        </div>
+                      </div>
+
                       {filteredProducts.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
                           {filteredProducts.map((product) => (
@@ -566,7 +613,7 @@ export default function Welcome() {
                                 product: product.id,
                                 name: slugify(product.name, { lower: true }),
                               })}
-                              className=""
+                              className="group block"
                             >
                               <motion.div
                                 key={product.id}
@@ -577,7 +624,7 @@ export default function Welcome() {
                                 initial="hidden"
                                 animate="visible"
                                 transition={{ duration: 0.2 }}
-                                className="flex items-center space-x-3 bg-white rounded-lg shadow p-3 hover:bg-gray-50 cursor-pointer"
+                                className="flex items-center gap-3 rounded-[1.25rem] border border-slate-100 bg-white p-3 shadow-[0_6px_20px_rgba(15,23,42,0.05)] transition-all duration-300 hover:-translate-y-0.5 hover:border-emerald-100 hover:shadow-[0_16px_30px_rgba(15,23,42,0.08)]"
                               >
                                 <Link
                                   href={route("products.show", {
@@ -586,21 +633,21 @@ export default function Welcome() {
                                       lower: true,
                                     }),
                                   })}
-                                  className=""
+                                  className="hidden"
                                 ></Link>
-                                <div className="relative flex items-center justify-center bg-gray-50 rounded-xl p-4">
+                                <div className="relative flex h-20 w-20 flex-none items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-b from-slate-50 to-white">
                                   <img
                                     src={getProductImageUrl(product)}
                                     alt={product.name}
-                                    className="w-20 h-20 object-contain rounded transition-all duration-300"
+                                    className="h-full w-full object-contain p-2.5 transition-transform duration-300 group-hover:scale-[1.05]"
                                   />
                                 </div>
 
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="font-semibold text-gray-800 truncate">
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="line-clamp-2 text-sm font-bold leading-5 text-slate-900 group-hover:text-emerald-700">
                                     {product.name}
                                   </h4>
-                                  <p className="text-green-600 font-bold">
+                                  <p className="mt-1 text-sm font-black text-emerald-600">
                                     {product.new_price !== null &&
                                       product.new_price !== undefined &&
                                       Number(product.new_price) !== 0 ? (
@@ -660,8 +707,16 @@ export default function Welcome() {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-center text-gray-500 py-8">
-                          ვერ მოიძებნა პროდუქტი.
+                        <div className="rounded-[1.25rem] border border-dashed border-slate-200 bg-slate-50 px-6 py-12 text-center">
+                          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm">
+                            <IoSearch size={20} />
+                          </div>
+                          <div className="text-sm font-semibold text-slate-900">
+                            {t("body.energy.noProducts")}
+                          </div>
+                          <div className="mt-1 text-xs text-slate-500">
+                            {t("body.energy.searchTip")}
+                          </div>
                         </div>
                       )}
                     </motion.div>

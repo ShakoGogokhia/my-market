@@ -166,6 +166,7 @@ class ProductController extends Controller
             'new_price' => 'nullable|numeric',
             'in_stock' => 'integer',
             'brand' => 'string|max:255',
+            'source' => 'nullable|in:market,warehouse',
             'visible' => 'nullable|boolean',
             'warranty' => 'required|string|max:100',
             'category' => 'required|string|max:255',
@@ -184,6 +185,11 @@ class ProductController extends Controller
 
         if (!isset($validated['markup_percent'])) {
             $validated['markup_percent'] = 18;
+        }
+
+        $validated['source'] = $validated['source'] ?? 'market';
+        if ($validated['source'] === 'warehouse' && !array_key_exists('visible', $validated)) {
+            $validated['visible'] = false;
         }
 
         $product = Product::create($validated);
@@ -213,6 +219,7 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'in_stock' => 'nullable|integer',
             'brand' => 'string',
+            'source' => 'nullable|in:market,warehouse',
             'visible' => 'sometimes|required|boolean',
             'warranty' => 'nullable|string',
             'category' => 'nullable|string',
@@ -233,6 +240,11 @@ class ProductController extends Controller
 
         if (!isset($validated['markup_percent'])) {
             $validated['markup_percent'] = 18;
+        }
+
+        $validated['source'] = $validated['source'] ?? $product->source ?? 'market';
+        if ($validated['source'] === 'warehouse' && !array_key_exists('visible', $validated)) {
+            $validated['visible'] = false;
         }
 
         $product->update($validated);

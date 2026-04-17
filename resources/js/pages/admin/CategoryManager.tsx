@@ -23,7 +23,7 @@ import { FolderPlus, LayoutGrid, PencilLine, Plus, RefreshCcw, Search, Trash2 } 
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: "მთავარი გვერდი", href: "/dashboard" },
-  { title: "კატეგორიები", href: "/categories" },
+  { title: "კატეგორიები", href: "/admin/CategoryManager" },
 ];
 
 type PageProps = {
@@ -32,6 +32,11 @@ type PageProps = {
       admin?: boolean;
     };
   };
+};
+
+type CategoryItem = {
+  name: string;
+  icon_url?: string | null;
 };
 
 function StatCard({
@@ -69,18 +74,44 @@ function StatCard({
   );
 }
 
+function CategoryAvatar({ category }: { category?: CategoryItem | null }) {
+  if (category?.icon_url) {
+    return (
+      <img
+        src={category.icon_url}
+        alt={category.name}
+        className="h-10 w-10 rounded-2xl object-cover"
+      />
+    );
+  }
+
+  return (
+    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-500">
+      <LayoutGrid className="h-5 w-5" />
+    </div>
+  );
+}
+
 export default function CategoriesPage() {
   const { auth } = usePage<PageProps>().props;
   const user = auth?.user;
 
-  const [categories, setCategories] = useState<string[]>([]);
-  const [newCategory, setNewCategory] = useState("");
-  const [editingCategory, setEditingCategory] = useState<string | null>(null);
-  const [editedName, setEditedName] = useState("");
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(false);
+
   const [createOpen, setCreateOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [createName, setCreateName] = useState("");
+  const [createIcon, setCreateIcon] = useState<File | null>(null);
+  const [createIconPreview, setCreateIconPreview] = useState<string | null>(null);
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editIcon, setEditIcon] = useState<File | null>(null);
+  const [editIconPreview, setEditIconPreview] = useState<string | null>(null);
+
+  const [deleteTarget, setDeleteTarget] = useState<CategoryItem | null>(null);
 
   const fetchCategories = async () => {
     try {
@@ -106,51 +137,122 @@ export default function CategoriesPage() {
     fetchCategories();
   }, [user]);
 
+  useEffect(() => {
+    if (!createIcon) {
+      setCreateIconPreview(null);
+      return;
+    }
+
+    const preview = URL.createObjectURL(createIcon);
+    setCreateIconPreview(preview);
+
+    return () => URL.revokeObjectURL(preview);
+  }, [createIcon]);
+
+  useEffect(() => {
+    if (!editIcon) {
+      setEditIconPreview(null);
+      return;
+    }
+
+    const preview = URL.createObjectURL(editIcon);
+    setEditIconPreview(preview);
+
+    return () => URL.revokeObjectURL(preview);
+  }, [editIcon]);
+
   const filteredCategories = useMemo(() => {
     if (!searchTerm.trim()) return categories;
-    return categories.filter((category) => category.toLowerCase().includes(searchTerm.toLowerCase()));
+    const query = searchTerm.toLowerCase();
+    return categories.filter((category) => category.name.toLowerCase().includes(query));
   }, [categories, searchTerm]);
 
   const stats = {
     total: categories.length,
     filtered: filteredCategories.length,
-    startingWithA: categories.filter((category) => category.toLowerCase().startsWith("a")).length,
-    longNames: categories.filter((category) => category.length > 12).length,
+    withIcon: categories.filter((category) => Boolean(category.icon_url)).length,
+    withoutIcon: categories.filter((category) => !category.icon_url).length,
   };
 
-  const handleAddCategory = async (event: React.FormEvent) => {
+  const openCreate = () => {
+    setCreateName("");
+    setCreateIcon(null);
+    setCreateOpen(true);
+  };
+
+  const openEdit = (category: CategoryItem) => {
+    setEditingCategory(category);
+    setEditName(category.name);
+    setEditIcon(null);
+    setEditOpen(true);
+  };
+
+  const submitCreate = async (event: React.FormEvent) => {
     event.preventDefault();
-    const name = newCategory.trim();
-    if (!name) return toast.warning("გთხოვთ, შეიყვანოთ კატეგორიის სახელი.");
+
+    const name = createName.trim();
+    if (!name) {
+      toast.warning("გთხოვთ, შეიყვანოთ კატეგორიის სახელი.");
+      return;
+    }
 
     try {
       setLoading(true);
-      await axios.post("/categories", { name });
-      toast.success("კატეგორია წარმატებით დაემატა.");
-      setNewCategory("");
+      const formData = new FormData();
+      formData.append("name", name);
+      if (createIcon) {
+        formData.append("icon", createIcon);
+      }
+
+      await axios.post("/categories", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      toast.success("კატეგორია შეიქმნა.");
       setCreateOpen(false);
+      setCreateName("");
+      setCreateIcon(null);
       await fetchCategories();
-    } catch (err: unknown) {
+    } catch (err: any) {
       if (axios.isAxiosError(err) && err.response?.status === 409) {
         toast.error("ეს კატეგორია უკვე არსებობს.");
       } else {
-        toast.error("კატეგორიის დამატება ვერ მოხერხდა.");
+        toast.error("კატეგორიის შექმნა ვერ მოხერხდა.");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateCategory = async (oldName: string) => {
-    const name = editedName.trim();
-    if (!name) return toast.warning("გთხოვთ, შეიყვანოთ ახალი სახელი.");
+  const submitEdit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!editingCategory) return;
+
+    const name = editName.trim();
+    if (!name) {
+      toast.warning("გთხოვთ, შეიყვანოთ კატეგორიის სახელი.");
+      return;
+    }
 
     try {
       setLoading(true);
-      await axios.put(`/categories/${encodeURIComponent(oldName)}`, { name });
+      const formData = new FormData();
+      formData.append("name", name);
+      if (editIcon) {
+        formData.append("icon", editIcon);
+      }
+      formData.append("_method", "PUT");
+
+      await axios.post(`/categories/${encodeURIComponent(editingCategory.name)}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
       toast.success("კატეგორია განახლდა.");
+      setEditOpen(false);
       setEditingCategory(null);
-      setEditedName("");
+      setEditName("");
+      setEditIcon(null);
       await fetchCategories();
     } catch (err) {
       console.error("Error updating category:", err);
@@ -160,12 +262,12 @@ export default function CategoriesPage() {
     }
   };
 
-  const handleDeleteCategory = async () => {
+  const submitDelete = async () => {
     if (!deleteTarget) return;
 
     try {
       setLoading(true);
-      await axios.delete(`/categories/${encodeURIComponent(deleteTarget)}`);
+      await axios.delete(`/categories/${encodeURIComponent(deleteTarget.name)}`);
       toast.success("კატეგორია წაიშალა.");
       setDeleteTarget(null);
       await fetchCategories();
@@ -187,7 +289,7 @@ export default function CategoriesPage() {
       <AdminPageShell
         badge="კატეგორიების მართვა"
         title="კატეგორიები"
-        description="დაამატეთ, შეცვალეთ და წაშალეთ კატეგორიები dashboard-ის ერთიან დიზაინში."
+        description="დაამატეთ, შეცვალეთ და წაშალეთ კატეგორიები. თითოეულ კატეგორიას შეუძლია ჰქონდეს საკუთარი icon ან image."
         actions={
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button
@@ -198,7 +300,7 @@ export default function CategoriesPage() {
               <RefreshCcw className="mr-2 h-4 w-4" />
               განახლება
             </Button>
-            <Button onClick={() => setCreateOpen(true)} className="shadow-sm">
+            <Button onClick={openCreate} className="shadow-sm">
               <Plus className="mr-2 h-4 w-4" />
               ახალი კატეგორია
             </Button>
@@ -209,8 +311,8 @@ export default function CategoriesPage() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard title="სულ კატეგორიები" value={stats.total} icon={<LayoutGrid className="h-6 w-6" />} />
             <StatCard title="ფილტრში" value={stats.filtered} icon={<Search className="h-6 w-6" />} tone="sky" />
-            <StatCard title='"a"-ზე იწყება' value={stats.startingWithA} icon={<FolderPlus className="h-6 w-6" />} tone="green" />
-            <StatCard title="გრძელი სახელები" value={stats.longNames} icon={<PencilLine className="h-6 w-6" />} tone="amber" />
+            <StatCard title="icon-ით" value={stats.withIcon} icon={<FolderPlus className="h-6 w-6" />} tone="green" />
+            <StatCard title="icon-ის გარეშე" value={stats.withoutIcon} icon={<PencilLine className="h-6 w-6" />} tone="amber" />
           </div>
 
           <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
@@ -218,10 +320,10 @@ export default function CategoriesPage() {
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="space-y-1">
                   <CardTitle className="text-xl">ძიება და ფილტრი</CardTitle>
-                  <CardDescription>სწრაფად მოძებნეთ კატეგორია სახელის მიხედვით.</CardDescription>
+                  <CardDescription>სწრაფად მოძებნეთ კატეგორია სახელით ან ნახეთ რამდენს აქვს icon.</CardDescription>
                 </div>
                 <Badge variant="outline" className="rounded-full px-3 py-1 text-sm">
-                  ნაპოვნია {filteredCategories.length} შედეგი
+                  ნაპოვნია {filteredCategories.length} ჩანაწერი
                 </Badge>
               </div>
             </CardHeader>
@@ -234,7 +336,7 @@ export default function CategoriesPage() {
                   <Input
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="კატეგორიის ძიება..."
+                    placeholder="კატეგორიის სახელი..."
                     className="h-11 rounded-xl border-slate-300 pl-9"
                   />
                 </div>
@@ -247,7 +349,7 @@ export default function CategoriesPage() {
               <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div className="space-y-1">
                   <CardTitle className="text-xl">კატეგორიების სია</CardTitle>
-                  <CardDescription>დაარედაქტირეთ ან წაშალეთ საჭირო ჩანაწერები.</CardDescription>
+                  <CardDescription>გამოსახულება ნაჩვენებია თუ ადმინისტრატორმა ატვირთა icon ან image.</CardDescription>
                 </div>
                 <Badge variant="secondary" className="rounded-full px-3 py-1">
                   საერთო {categories.length}
@@ -260,77 +362,56 @@ export default function CategoriesPage() {
                 <table className="w-full text-sm">
                   <thead className="bg-slate-50/80">
                     <tr>
-                      <th className="px-6 py-3 text-left font-semibold text-slate-700">კატეგორიის სახელი</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-700">icon</th>
+                      <th className="px-6 py-3 text-left font-semibold text-slate-700">სახელი</th>
                       <th className="px-6 py-3 text-right font-semibold text-slate-700">მოქმედებები</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredCategories.map((category, index) => (
-                      <tr key={category} className={`border-t ${index % 2 === 0 ? "bg-white" : "bg-slate-50"} hover:bg-blue-50 transition`}>
+                      <tr
+                        key={category.name}
+                        className={`border-t ${index % 2 === 0 ? "bg-white" : "bg-slate-50"} hover:bg-blue-50 transition`}
+                      >
                         <td className="px-6 py-3">
-                          {editingCategory === category ? (
-                            <Input
-                              value={editedName}
-                              onChange={(e) => setEditedName(e.target.value)}
-                              className="h-10 rounded-xl border-slate-300"
-                            />
-                          ) : (
-                            <span className="font-medium text-slate-800">{category}</span>
-                          )}
+                          <CategoryAvatar category={category} />
+                        </td>
+                        <td className="px-6 py-3">
+                          <div className="space-y-1">
+                            <span className="font-medium text-slate-800">{category.name}</span>
+                            {!category.icon_url && (
+                              <p className="text-xs text-slate-500">ნაგულისხმევი icon გამოიყენება</p>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-3 text-right">
-                          {editingCategory === category ? (
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                type="button"
-                                className="rounded-xl bg-emerald-600 text-white hover:bg-emerald-700"
-                                onClick={() => handleUpdateCategory(category)}
-                                disabled={loading}
-                              >
-                                <PencilLine className="mr-1 h-4 w-4" />
-                                შენახვა
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="rounded-xl"
-                                onClick={() => setEditingCategory(null)}
-                              >
-                                გაუქმება
-                              </Button>
-                            </div>
-                          ) : (
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                className="rounded-xl"
-                                onClick={() => {
-                                  setEditingCategory(category);
-                                  setEditedName(category);
-                                }}
-                              >
-                                <PencilLine className="mr-1 h-4 w-4" />
-                                რედაქტირება
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                className="rounded-xl"
-                                onClick={() => setDeleteTarget(category)}
-                                disabled={loading}
-                              >
-                                <Trash2 className="mr-1 h-4 w-4" />
-                                წაშლა
-                              </Button>
-                            </div>
-                          )}
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="rounded-xl"
+                              onClick={() => openEdit(category)}
+                            >
+                              <PencilLine className="mr-1 h-4 w-4" />
+                              რედაქტირება
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              className="rounded-xl"
+                              onClick={() => setDeleteTarget(category)}
+                              disabled={loading}
+                            >
+                              <Trash2 className="mr-1 h-4 w-4" />
+                              წაშლა
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
                     {filteredCategories.length === 0 && (
                       <tr>
-                        <td colSpan={2} className="py-12 text-center text-slate-500 italic">
+                        <td colSpan={3} className="py-12 text-center text-slate-500 italic">
                           კატეგორია ვერ მოიძებნა
                         </td>
                       </tr>
@@ -348,7 +429,7 @@ export default function CategoriesPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <AdminDialogFrame
           title="ახალი კატეგორიის დამატება"
-          description="შეიყვანეთ კატეგორიის სახელი და ის დაუყოვნებლივ გამოჩნდება სიაში."
+          description="შეიყვანეთ კატეგორიის სახელი და სურვილის შემთხვევაში ატვირთეთ icon ან image. თუ არ ატვირთავთ, ნაგულისხმევი icon გამოჩნდება."
           footer={
             <>
               <Button type="button" variant="outline" onClick={() => setCreateOpen(false)} className="rounded-xl">
@@ -360,14 +441,92 @@ export default function CategoriesPage() {
             </>
           }
         >
-          <form id="create-category-form" className="space-y-4" onSubmit={handleAddCategory}>
-            <Input
-              value={newCategory}
-              onChange={(e) => setNewCategory(e.target.value)}
-              placeholder="მაგ: მზის აქსესუარები"
-              autoFocus
-              className="h-11 rounded-xl border-slate-300"
-            />
+          <form id="create-category-form" className="space-y-4" onSubmit={submitCreate}>
+            <div className="space-y-2">
+              <Label>კატეგორიის სახელი</Label>
+              <Input
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="მაგ: Cameras"
+                autoFocus
+                className="h-11 rounded-xl border-slate-300"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Icon ან image</Label>
+              <div className="flex items-center gap-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                <CategoryAvatar
+                  category={createIconPreview ? { name: createName || "preview", icon_url: createIconPreview } : null}
+                />
+                <div className="flex-1 space-y-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setCreateIcon(e.target.files?.[0] || null)}
+                    className="h-11 rounded-xl border-slate-300"
+                  />
+                  <p className="text-xs text-slate-500">
+                    ატვირთვა არ არის სავალდებულო. თუ არ აირჩევთ ფაილს, კატეგორია default icon-ით გამოჩნდება.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </form>
+        </AdminDialogFrame>
+      </Dialog>
+
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open);
+          if (!open) {
+            setEditingCategory(null);
+            setEditIcon(null);
+          }
+        }}
+      >
+        <AdminDialogFrame
+          title="კატეგორიის რედაქტირება"
+          description="შეცვალეთ სახელი ან ჩაანაცვლეთ არსებული icon/image ახალი ფაილით."
+          footer={
+            <>
+              <Button type="button" variant="outline" onClick={() => setEditOpen(false)} className="rounded-xl">
+                გაუქმება
+              </Button>
+              <Button type="submit" form="edit-category-form" disabled={loading} className="rounded-xl">
+                {loading ? "ინახება..." : "შენახვა"}
+              </Button>
+            </>
+          }
+        >
+          <form id="edit-category-form" className="space-y-4" onSubmit={submitEdit}>
+            <div className="space-y-2">
+              <Label>კატეგორიის სახელი</Label>
+              <Input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className="h-11 rounded-xl border-slate-300"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>არსებული icon</Label>
+              <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <CategoryAvatar category={editIconPreview ? { name: editName || "preview", icon_url: editIconPreview } : editingCategory} />
+                <div className="flex-1 space-y-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setEditIcon(e.target.files?.[0] || null)}
+                    className="h-11 rounded-xl border-slate-300"
+                  />
+                  <p className="text-xs text-slate-500">
+                    ახალი ფაილის ატვირთვა შეცვლის ძველ icon-ს. თუ ფაილს არ აირჩევთ, არსებული დარჩება.
+                  </p>
+                </div>
+              </div>
+            </div>
           </form>
         </AdminDialogFrame>
       </Dialog>
@@ -380,12 +539,12 @@ export default function CategoriesPage() {
       >
         <AdminAlertDialogFrame
           title="კატეგორიის წაშლა"
-          description={`დარწმუნებული ხართ, რომ გსურთ წაშალოთ "${deleteTarget || "ეს კატეგორია"}"?`}
+          description={`დარწმუნებული ხართ, რომ გსურთ წაშალოთ "${deleteTarget?.name || "ეს კატეგორია"}"?`}
           footer={
             <>
               <AlertDialogCancel className="rounded-xl">გაუქმება</AlertDialogCancel>
               <AlertDialogAction
-                onClick={handleDeleteCategory}
+                onClick={submitDelete}
                 className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
                 წაშლა
@@ -394,7 +553,7 @@ export default function CategoriesPage() {
           }
         >
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
-            ეს მოქმედება კატეგორიას სამუდამოდ წაშლის.
+            icon ფაილიც წაიშლება, თუ კატეგორიას ჰქონდა ატვირთული image.
           </div>
         </AdminAlertDialogFrame>
       </AlertDialog>

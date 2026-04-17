@@ -9,6 +9,7 @@ use App\Http\Controllers\VacancyController;
 use App\Http\Controllers\PromoCodeController;
 use App\Http\Controllers\ProgramOrderController;
 use App\Http\Controllers\PreOrderController;
+use App\Http\Controllers\WarehouseInventoryController;
 use Illuminate\Auth\Middleware\Authenticate;
 use App\Http\Middleware\AdminMiddleware;
 use Twilio\Rest\Client;
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\GmailTestMail;
 
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CarouselImageController;
 
 
 Route::get('/', function () {
@@ -26,6 +28,7 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
+    Route::get('/admin/warehouse-items', [WarehouseInventoryController::class, 'index'])->name('admin.warehouse-items.index');
     Route::post('/admin/products', [ProductController::class, 'store']);
     Route::put('/admin/products/{id}', [ProductController::class, 'adminUpdate']);
     Route::delete('/admin/products/{id}', [ProductController::class, 'destroy']);
@@ -33,6 +36,11 @@ Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/admin/CategoryManager', function () {
         return Inertia::render('admin/CategoryManager');
     });
+    Route::get('/admin/carousel-images', [CarouselImageController::class, 'adminPage'])->name('admin.carousel-images.index');
+    Route::get('/admin/carousel-images/list', [CarouselImageController::class, 'adminIndex'])->name('admin.carousel-images.list');
+    Route::post('/admin/carousel-images', [CarouselImageController::class, 'store']);
+    Route::put('/admin/carousel-images/{id}', [CarouselImageController::class, 'update']);
+    Route::delete('/admin/carousel-images/{id}', [CarouselImageController::class, 'destroy']);
     Route::get('/admin/pre-orders', [PreOrderController::class, 'index'])->name('admin.preorders.index');
     Route::get('/admin/pre-orders/{id}', [PreOrderController::class, 'show'])->name('admin.preorders.show');
     Route::delete('/admin/pre-orders/{id}', [PreOrderController::class, 'destroy'])->name('admin.preorders.destroy');
@@ -69,6 +77,7 @@ Route::get('/products/{product}/{name}', [ProductController::class, 'show'])
     ->name('products.show');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::get('/categories-with-count', [CategoryController::class, 'categoriesWithCount']);
+Route::get('/carousel-images', [CarouselImageController::class, 'index']);
 
 
 Route::put('/products/{product}/category', [ProductController::class, 'updateCategory']);

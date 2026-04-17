@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/sidebar";
 import { type NavItem } from "@/types";
 import { Link } from "@inertiajs/react";
-import { BookOpen, Folder, LayoutGrid } from "lucide-react";
+import { BookOpen, Folder, ImagePlus, LayoutGrid } from "lucide-react";
 import AppLogo from "./app-logo";
 
 const mainNavItems: NavItem[] = [
@@ -50,6 +50,11 @@ const mainNavItems: NavItem[] = [
     title: "კატეგორიები",
     href: "/admin/CategoryManager",
     icon: LayoutGrid,
+  },
+  {
+    title: "Carousel Images",
+    href: "/admin/carousel-images",
+    icon: ImagePlus,
   },
 ];
 

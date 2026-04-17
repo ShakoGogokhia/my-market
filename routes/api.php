@@ -1,11 +1,6 @@
-
 <?php
 
+use App\Http\Controllers\Api\WarehouseSyncController;
+use Illuminate\Support\Facades\Route;
 
-use App\Models\YourModel; 
-use Illuminate\Http\Request;
-
-Route::get('/your-endpoint', function () {
-    $data = YourModel::all(); 
-    return response()->json($data); 
-});
+Route::post('/warehouse/sync-item', [WarehouseSyncController::class, 'upsert']);

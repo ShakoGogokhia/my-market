@@ -4,14 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CategoryController extends Controller
 {
+    private function categoryPayload(Category $category): array
+    {
+        return [
+            'name' => $category->name,
+            'icon_url' => $category->icon_url,
+        ];
+    }
+
     public function index()
     {
-
         return response()->json([
-            'categories' => Category::orderBy('name', 'asc')->pluck('name')
+            'categories' => Category::orderBy('name', 'asc')->get()->map(fn (Category $category) => $this->categoryPayload($category))->values(),
         ]);
     }
 
@@ -19,16 +27,23 @@ class CategoryController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:categories,name',
+            'icon' => 'nullable|image|max:4096',
         ]);
 
-        $category = Category::create(['name' => trim($validated['name'])]);
+        $iconPath = null;
+        if ($request->hasFile('icon')) {
+            $iconPath = $request->file('icon')->store('categories', 'public');
+        }
 
-        $categories = Category::orderBy('name', 'asc')->pluck('name');
+        $category = Category::create([
+            'name' => trim($validated['name']),
+            'icon_path' => $iconPath,
+        ]);
 
         return response()->json([
-            'message' => 'კატეგორია დაემატა წარმატებით',
-            'category' => $category,
-            'categories' => $categories
+            'message' => 'áƒ™áƒáƒ¢áƒ”áƒ’áƒáƒ áƒ˜áƒ áƒ“áƒáƒ”áƒ›áƒáƒ¢áƒ áƒ¬áƒáƒ áƒ›áƒáƒ¢áƒ”áƒ‘áƒ˜áƒ—',
+            'category' => $this->categoryPayload($category),
+            'categories' => Category::orderBy('name', 'asc')->get()->map(fn (Category $item) => $this->categoryPayload($item))->values(),
         ], 201);
     }
 
@@ -45,16 +60,27 @@ class CategoryController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:categories,name,' . $existingCategory->id,
+            'icon' => 'nullable|image|max:4096',
         ]);
 
-        $existingCategory->update(['name' => trim($validated['name'])]);
+        $iconPath = $existingCategory->icon_path;
+        if ($request->hasFile('icon')) {
+            if ($existingCategory->icon_path) {
+                Storage::disk('public')->delete($existingCategory->icon_path);
+            }
 
-        $categories = Category::orderBy('name', 'asc')->pluck('name');
+            $iconPath = $request->file('icon')->store('categories', 'public');
+        }
+
+        $existingCategory->update([
+            'name' => trim($validated['name']),
+            'icon_path' => $iconPath,
+        ]);
 
         return response()->json([
-            'message' => 'კატეგორია განახლდა წარმატებით',
-            'category' => $existingCategory,
-            'categories' => $categories
+            'message' => 'áƒ™áƒáƒ¢áƒ”áƒ’áƒáƒ áƒ˜áƒ áƒ’áƒáƒœáƒáƒ®áƒšáƒ“áƒ áƒ¬áƒáƒ áƒ›áƒáƒ¢áƒ”áƒ‘áƒ˜áƒ—',
+            'category' => $this->categoryPayload($existingCategory->fresh()),
+            'categories' => Category::orderBy('name', 'asc')->get()->map(fn (Category $item) => $this->categoryPayload($item))->values(),
         ]);
     }
 
@@ -69,16 +95,18 @@ class CategoryController extends Controller
             ], 404);
         }
 
+        if ($existingCategory->icon_path) {
+            Storage::disk('public')->delete($existingCategory->icon_path);
+        }
+
         $existingCategory->delete();
 
-        $categories = Category::orderBy('name', 'asc')->pluck('name');
-
         return response()->json([
-            'message' => 'კატეგორია წაიშალა წარმატებით',
-            'categories' => $categories
+            'message' => 'áƒ™áƒáƒ¢áƒ”áƒ’áƒáƒ áƒ˜áƒ áƒ¬áƒáƒ˜áƒ¨áƒáƒšáƒ áƒ¬áƒáƒ áƒ›áƒáƒ¢áƒ”áƒ‘áƒ˜áƒ—',
+            'categories' => Category::orderBy('name', 'asc')->get()->map(fn (Category $item) => $this->categoryPayload($item))->values(),
         ]);
-
     }
+
     public function categoriesWithCount()
     {
         $counts = \DB::table('products')
@@ -87,10 +115,11 @@ class CategoryController extends Controller
             ->get()
             ->keyBy('category');
 
-        $categories = Category::orderBy('name', 'asc')->get()->map(function ($cat) use ($counts) {
+        $categories = Category::orderBy('name', 'asc')->get()->map(function (Category $cat) use ($counts) {
             return [
                 'name' => $cat->name,
                 'total' => $counts[$cat->name]->total ?? 0,
+                'icon_url' => $cat->icon_url,
             ];
         });
 
@@ -98,5 +127,4 @@ class CategoryController extends Controller
             'categories' => $categories
         ]);
     }
-
 }

@@ -31,7 +31,6 @@ import {
   EyeOff,
   FolderPlus,
   ImagePlus,
-  Layers3,
   Package2,
   PencilLine,
   Plus,
@@ -66,6 +65,9 @@ type Product = {
   visible: boolean | number;
   category?: string | null;
   warranty?: string | null;
+  source?: "market" | "warehouse" | null;
+  source_system?: string | null;
+  source_external_id?: string | null;
   specifications?: ProductSpec[];
 };
 
@@ -82,6 +84,7 @@ type ProductFormValues = {
   brand: string;
   category: string;
   warranty: string;
+  source: "market" | "warehouse";
   description: string;
   visible: boolean;
 };
@@ -101,6 +104,7 @@ const emptyForm: ProductFormValues = {
   brand: "",
   category: "",
   warranty: "",
+  source: "market",
   description: "",
   visible: true,
 };
@@ -119,10 +123,11 @@ const money = (value: number | string) => {
 
 const toNumber = (value: string) => Number(value);
 
-const normalizeCategories = (categories: string[]) =>
+const normalizeCategories = (categories: Array<string | { name?: string }>) =>
   Array.from(
     new Set(
       categories
+        .map((category) => (typeof category === "string" ? category : category?.name || ""))
         .map((category) => category.trim())
         .filter(Boolean),
     ),
@@ -171,6 +176,7 @@ function validate(values: ProductFormValues, fileCount: number, existingCount: n
   if (values.brand.trim().length < 2) push("brand", "ბრენდი სავალდებულოა.");
   if (values.category.trim().length < 2) push("category", "კატეგორია სავალდებულოა.");
   if (values.warranty.trim().length < 2) push("warranty", "გარანტია სავალდებულოა.");
+  if (!values.source) push("source", "წყარო სავალდებულოა.");
   if (values.description.trim().length > 4000) push("description", "აღწერა ძალიან გრძელია.");
   if (fileCount + existingCount < 1) push("images", "მინიმუმ ერთი სურათი დაამატეთ.");
 
@@ -489,6 +495,30 @@ function ProductDialog({
                       <ErrorText errors={errors} field="warranty" />
                     </div>
 
+                    <div className="space-y-2">
+                      <Label>წყარო</Label>
+                      <Select
+                        value={values.source}
+                        onValueChange={(source) => {
+                          const nextSource = source as "market" | "warehouse";
+                          setValues({
+                            ...values,
+                            source: nextSource,
+                            visible: nextSource === "warehouse" ? false : values.visible,
+                          });
+                        }}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl border-slate-300 bg-white">
+                          <SelectValue placeholder="აირჩიეთ წყარო" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="market">Market</SelectItem>
+                          <SelectItem value="warehouse">Warehouse</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <ErrorText errors={errors} field="source" />
+                    </div>
+
                     <div className="space-y-2 md:col-span-2">
                       <Label>აღწერა</Label>
                       <Textarea
@@ -590,21 +620,24 @@ function ProductDialog({
                           <ErrorText errors={errors} field="in_stock" />
                         </div>
 
-                        <div className="space-y-2">
-                          <Label>ხილვადობა</Label>
-                          <button
-                            type="button"
-                            onClick={() => setValues({ ...values, visible: !values.visible })}
-                            className={cn(
-                              "flex h-11 w-full items-center justify-between rounded-xl border px-3 text-sm font-medium transition",
-                              values.visible
-                                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                : "border-slate-300 bg-slate-50 text-slate-600",
-                            )}
-                          >
-                            <span>{values.visible ? "ხილული" : "დამალული"}</span>
-                            {values.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                          </button>
+                      <div className="space-y-2">
+                        <Label>ხილვადობა</Label>
+                        <button
+                          type="button"
+                          onClick={() => setValues({ ...values, visible: !values.visible })}
+                          className={cn(
+                            "flex h-11 w-full items-center justify-between rounded-xl border px-3 text-sm font-medium transition",
+                            values.visible
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                              : "border-slate-300 bg-slate-50 text-slate-600",
+                          )}
+                        >
+                          <span>{values.visible ? "ხილული" : "დამალული"}</span>
+                          {values.visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        </button>
+                        {values.source === "warehouse" ? (
+                          <p className="text-xs text-amber-600">Warehouse items can be shown on the public site when visibility is enabled.</p>
+                        ) : null}
                         </div>
                       </div>
                     </CardContent>
@@ -767,6 +800,7 @@ export default function Dashboard() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [stockFilter, setStockFilter] = useState("all");
+  const [sourceFilter, setSourceFilter] = useState("all");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -797,7 +831,10 @@ export default function Dashboard() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [productsResponse, categoriesResponse] = await Promise.all([axios.get("/products"), axios.get("/categories")]);
+      const [productsResponse, categoriesResponse] = await Promise.all([
+        axios.get("/products"),
+        axios.get("/categories"),
+      ]);
       setProducts(productsResponse.data.products || []);
       setCategories(normalizeCategories(categoriesResponse.data.categories || []));
     } catch (error) {
@@ -864,7 +901,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, categoryFilter, stockFilter]);
+  }, [search, categoryFilter, stockFilter, sourceFilter]);
 
   const filtered = useMemo(() => {
     return products.filter((product) => {
@@ -876,10 +913,11 @@ export default function Dashboard() {
 
       const stock = Number(product.in_stock) || 0;
       const matchesStock = stockFilter === "all" ? true : stockFilter === "in" ? stock > 0 : stock <= 0;
+      const matchesSource = sourceFilter === "all" ? true : (product.source || "market") === sourceFilter;
 
-      return matchesSearch && matchesCategory && matchesStock;
+      return matchesSearch && matchesCategory && matchesStock && matchesSource;
     });
-  }, [products, search, categoryFilter, stockFilter]);
+  }, [products, search, categoryFilter, stockFilter, sourceFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
   const safePage = Math.min(currentPage, totalPages);
@@ -890,9 +928,15 @@ export default function Dashboard() {
     if (currentPage !== safePage) setCurrentPage(safePage);
   }, [currentPage, safePage]);
 
+  const warehouseProducts = useMemo(
+    () => products.filter((product) => (product.source || "market") === "warehouse"),
+    [products],
+  );
+
   const stats = {
     total: products.length,
     visible: products.filter((product) => Boolean(product.visible)).length,
+    warehouse: warehouseProducts.length,
     lowStock: products.filter((product) => (Number(product.in_stock) || 0) <= 5).length,
     categories: categories.length,
   };
@@ -919,6 +963,7 @@ export default function Dashboard() {
       brand: product.brand || "",
       category: product.category || "",
       warranty: product.warranty || "",
+      source: (product.source as "market" | "warehouse") || "market",
       description: product.description || "",
       visible: Boolean(product.visible),
     });
@@ -955,6 +1000,7 @@ export default function Dashboard() {
     formData.append("brand", addValues.brand.trim());
     formData.append("category", addValues.category.trim());
     formData.append("warranty", addValues.warranty.trim());
+    formData.append("source", addValues.source);
     formData.append("description", addValues.description.trim());
     formData.append("visible", addValues.visible ? "1" : "0");
     formData.append("specifications", JSON.stringify(cleanSpecs(addSpecs)));
@@ -1007,6 +1053,7 @@ export default function Dashboard() {
     formData.append("brand", editValues.brand.trim());
     formData.append("category", editValues.category.trim());
     formData.append("warranty", editValues.warranty.trim());
+    formData.append("source", editValues.source);
     formData.append("description", editValues.description.trim());
     formData.append("visible", editValues.visible ? "1" : "0");
     formData.append("keep_images", JSON.stringify(editExistingImages));
@@ -1093,6 +1140,13 @@ export default function Dashboard() {
                     <Plus className="mr-2 h-4 w-4" />
                     პროდუქტის დამატება
                   </Button>
+
+                  <a href="/admin/carousel-images">
+                    <Button variant="outline" className="rounded-2xl shadow-sm">
+                      <ImagePlus className="mr-2 h-4 w-4" />
+                      Carousel Images
+                    </Button>
+                  </a>
                 </div>
               </div>
             </div>
@@ -1101,7 +1155,7 @@ export default function Dashboard() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard title="სულ პროდუქტები" value={stats.total} icon={<Package2 className="h-6 w-6" />} />
             <StatCard title="ხილული" value={stats.visible} icon={<Eye className="h-6 w-6" />} tone="green" />
-            <StatCard title="დაბალი მარაგი" value={stats.lowStock} icon={<Layers3 className="h-6 w-6" />} tone="amber" />
+            <StatCard title="Warehouse" value={stats.warehouse} icon={<Boxes className="h-6 w-6" />} tone="amber" />
             <StatCard title="კატეგორიები" value={stats.categories} icon={<Sparkles className="h-6 w-6" />} tone="sky" />
           </div>
 
@@ -1118,7 +1172,7 @@ export default function Dashboard() {
               </div>
             </CardHeader>
 
-            <CardContent className="grid gap-4 lg:grid-cols-3">
+            <CardContent className="grid gap-4 lg:grid-cols-4">
               <div className="space-y-2">
                 <Label>ძიება</Label>
                 <div className="relative">
@@ -1162,6 +1216,20 @@ export default function Dashboard() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>წყარო</Label>
+                <Select value={sourceFilter} onValueChange={setSourceFilter}>
+                  <SelectTrigger className="h-11 rounded-xl border-slate-300">
+                    <SelectValue placeholder="წყაროთი ფილტრაცია" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">ყველა წყარო</SelectItem>
+                    <SelectItem value="market">Market</SelectItem>
+                    <SelectItem value="warehouse">Warehouse</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </CardContent>
           </Card>
 
@@ -1190,6 +1258,7 @@ export default function Dashboard() {
                       <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
                         <TableHead className="h-12 font-semibold text-slate-700">პროდუქტი</TableHead>
                         <TableHead className="font-semibold text-slate-700">კატეგორია</TableHead>
+                        <TableHead className="font-semibold text-slate-700">წყარო</TableHead>
                         <TableHead className="font-semibold text-slate-700">ფასი</TableHead>
                         <TableHead className="font-semibold text-slate-700">მარაგი</TableHead>
                         <TableHead className="font-semibold text-slate-700">სტატუსი</TableHead>
@@ -1203,6 +1272,7 @@ export default function Dashboard() {
                         const stock = Number(product.in_stock) || 0;
                         const visible = Boolean(product.visible);
                         const lowStock = stock > 0 && stock <= 5;
+                        const source = product.source || "market";
 
                         return (
                           <TableRow key={product.id} className="hover:bg-slate-50/70">
@@ -1228,6 +1298,19 @@ export default function Dashboard() {
                             <TableCell>
                               <Badge variant="outline" className="rounded-full border-slate-300 bg-white">
                                 {product.category || "მინიჭებული არაა"}
+                              </Badge>
+                            </TableCell>
+
+                            <TableCell>
+                              <Badge
+                                className={cn(
+                                  "rounded-full",
+                                  source === "warehouse"
+                                    ? "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                                    : "bg-sky-100 text-sky-700 hover:bg-sky-100",
+                                )}
+                              >
+                                {source === "warehouse" ? "Warehouse" : "Market"}
                               </Badge>
                             </TableCell>
 
@@ -1344,6 +1427,110 @@ export default function Dashboard() {
                   </div>
                 </>
               ) : null}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-3xl border-slate-200 bg-white shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-xl">Warehouse items in Market</CardTitle>
+                  <CardDescription>
+                    ეს სია ინახება Market-ის ბაზაში, მოდის Billing-დან და არ ჩანს public საიტზე.
+                  </CardDescription>
+                </div>
+                <Badge className="rounded-full bg-amber-100 px-3 py-1 text-amber-700 hover:bg-amber-100">
+                  {warehouseProducts.length} items
+                </Badge>
+              </div>
+            </CardHeader>
+
+            <CardContent>
+              {warehouseProducts.length > 0 ? (
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                  <div className="max-h-[540px] overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                          <TableHead className="h-12 font-semibold text-slate-700">Item</TableHead>
+                          <TableHead className="font-semibold text-slate-700">Qty</TableHead>
+                          <TableHead className="font-semibold text-slate-700">Category</TableHead>
+                          <TableHead className="font-semibold text-slate-700">Code</TableHead>
+                          <TableHead className="text-right font-semibold text-slate-700">Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+
+                      <TableBody>
+                        {warehouseProducts.map((product) => {
+                          const cover = previewImages(product)[0];
+
+                          return (
+                            <TableRow key={product.id} className="hover:bg-slate-50/70">
+                              <TableCell>
+                                <div className="flex min-w-[260px] items-center gap-3">
+                                  <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 shadow-sm">
+                                    {cover ? (
+                                      <img src={cover} alt={product.name} className="h-full w-full object-cover" />
+                                    ) : (
+                                      <Boxes className="h-5 w-5 text-slate-400" />
+                                    )}
+                                  </div>
+                                  <div className="space-y-1">
+                                    <div className="font-semibold text-slate-900">{product.name}</div>
+                                    <div className="text-xs text-slate-500">
+                                      {product.source_system === "billing" ? "Synced from Billing" : "Warehouse item"}
+                                    </div>
+                                  </div>
+                                </div>
+                              </TableCell>
+
+                            <TableCell>
+                              <Badge className="rounded-full bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                                {Number(product.in_stock || 0).toFixed(0)}
+                              </Badge>
+                            </TableCell>
+
+                            <TableCell>
+                              <Badge variant="outline" className="rounded-full border-slate-300 bg-white">
+                                {product.category || "Warehouse"}
+                              </Badge>
+                            </TableCell>
+
+                            <TableCell>
+                              <span className="text-sm font-medium text-slate-600">
+                                {product.code || "—"}
+                              </span>
+                            </TableCell>
+
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="rounded-xl"
+                                onClick={() => openEdit(product)}
+                              >
+                                <PencilLine className="mr-2 h-4 w-4" />
+                                Edit
+                              </Button>
+                            </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-12 text-center">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm">
+                    <Boxes className="h-6 w-6 text-slate-500" />
+                  </div>
+                  <div className="text-lg font-semibold text-slate-900">Warehouse items not synced yet</div>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Billing item names will appear here after they are synced into Market.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
