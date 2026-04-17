@@ -90,7 +90,8 @@ class OrderController extends Controller
 
             $promoCode = \App\Models\PromoCode::find($promoCodeId);
             if ($promoCode) {
-                $promoCode->used = true;
+                $promoCode->uses_count = (int) $promoCode->uses_count + 1;
+                $promoCode->used = $promoCode->uses_count >= (int) $promoCode->max_uses;
                 $promoCode->save();
                 \Log::info("Promo code marked as used: " . $promoCodeId);
             }

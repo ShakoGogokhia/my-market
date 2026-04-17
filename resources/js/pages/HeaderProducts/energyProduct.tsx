@@ -303,19 +303,20 @@ export default function ProductPage() {
   };
 
   function getProductImageUrl(product: ProductType): string {
-    if (Array.isArray(product.images) && product.images.length > 0) {
-      const firstImage = product.images[0];
-      if (typeof firstImage === "string") return firstImage;
-      if (firstImage?.url) return firstImage.url;
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    const firstImage = product.images[0];
+
+    if (typeof firstImage === "object" && firstImage?.url?.trim()) {
+      return firstImage.url;
     }
 
-    if (product.image) {
-      if (typeof product.image === "string") return product.image;
-      if (product.image?.url) return product.image.url;
+    if (typeof firstImage === "string" && firstImage.trim() !== "") {
+      return firstImage;
     }
-
-    return "/images/placeholder.png";
   }
+
+  return "/images/placeholder.png";
+}
 
   function getDisplayPrice(product: ProductType) {
     const original = Number(product.price || 0);

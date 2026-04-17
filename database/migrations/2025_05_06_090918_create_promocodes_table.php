@@ -13,12 +13,15 @@ return new class extends Migration
     {
         Schema::create('promo_codes', function (Blueprint $table) {
             $table->id();
-            $table->string('code')->unique();
+            $table->string('code', 50)->unique();
             $table->foreignId('owner_user_id')->constrained('users')->cascadeOnDelete();
-            $table->decimal('discount_percent', 5, 2)->default(0);
+            $table->decimal('discount_percent', 5, 2);
             $table->decimal('owner_credit_percent', 5, 2)->default(0);
+            $table->unsignedInteger('max_uses')->default(1);
+            $table->unsignedInteger('uses_count')->default(0)->index();
             $table->boolean('used')->default(false);
-            $table->timestamps();
+            $table->timestamp('created_at')->useCurrent();
+            $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
         });
     }
 

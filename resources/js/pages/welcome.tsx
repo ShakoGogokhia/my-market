@@ -358,30 +358,24 @@ export default function Welcome() {
     localStorage.setItem("lang", newLang);
   };
 
-  function getProductImageUrl(product) {
-    if (Array.isArray(product.images) && product.images.length > 0) {
-      const firstImage = product.images[0];
-      if (typeof firstImage === "string" && firstImage.trim() !== "") {
-        return firstImage;
-      }
-      if (
-        firstImage &&
-        typeof firstImage === "object" &&
-        typeof firstImage.url === "string" &&
-        firstImage.url.trim() !== ""
-      ) {
-        return firstImage.url;
-      }
+function getProductImageUrl(product: {
+  images?: Array<string | { url?: string | null }>;
+  image?: string | null;
+}) {
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    const firstImage = product.images[0];
+
+    if (typeof firstImage === "object" && firstImage?.url?.trim()) {
+      return firstImage.url;
     }
-    if (
-      product.image &&
-      typeof product.image === "string" &&
-      product.image.trim() !== ""
-    ) {
-      return product.image;
+
+    if (typeof firstImage === "string" && firstImage.trim()) {
+      return firstImage;
     }
-    return "/images/placeholder.png";
   }
+
+  return "/images/placeholder.png";
+}
 
   const addToCart = (product: ProductType) => {
     setLoadingProductId(product.id);

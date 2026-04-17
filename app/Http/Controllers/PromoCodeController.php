@@ -41,7 +41,10 @@ class PromoCodeController extends Controller
             'owner_user_id' => 'required|exists:users,id',
             'discount_percent' => 'required|numeric|min:0|max:50',
             'owner_credit_percent' => 'required|numeric|min:0|max:50',
+            'max_uses' => 'nullable|integer|min:1',
         ]);
+
+        $validated['max_uses'] = $validated['max_uses'] ?? 1;
 
         $promoCode = PromoCode::create($validated);
 
@@ -65,12 +68,16 @@ class PromoCodeController extends Controller
 
         $user = auth()->user();
         if (!$user) {
-            return response()->json(['message' => 'მომხმარებელი არ არის ავტორიზებული'], 401);
+            return response()->json(['message' => 'áƒ›áƒáƒ›áƒ®áƒ›áƒáƒ áƒ”áƒ‘áƒ”áƒšáƒ˜ áƒáƒ  áƒáƒ áƒ˜áƒ¡ áƒáƒ•áƒ¢áƒáƒ áƒ˜áƒ–áƒ”áƒ‘áƒ£áƒšáƒ˜'], 401);
         }
 
         $promo = PromoCode::where('code', $request->code)->first();
         if (!$promo) {
-            return response()->json(['message' => 'პრომოკოდი არ მოიძებნა'], 404);
+            return response()->json(['message' => 'áƒžáƒ áƒáƒ›áƒáƒ™áƒáƒ“áƒ˜ áƒáƒ  áƒ›áƒáƒ˜áƒ«áƒ”áƒ‘áƒœáƒ'], 404);
+        }
+
+        if ($promo->used || $promo->uses_count >= $promo->max_uses) {
+            return response()->json(['message' => 'áƒžáƒ áƒáƒ›áƒáƒ™áƒáƒ“áƒ˜ áƒ§áƒ•áƒ”áƒšáƒ áƒ˜áƒ“áƒ–áƒšáƒ”áƒ•áƒ'], 409);
         }
 
         $alreadyUsed = PromoCodeClaim::where('user_id', $user->id)
@@ -78,7 +85,7 @@ class PromoCodeController extends Controller
             ->exists();
 
         if ($alreadyUsed) {
-            return response()->json(['message' => 'პრომოკოდი უკვე გამოყენებულია'], 409);
+            return response()->json(['message' => 'áƒžáƒ áƒáƒ›áƒáƒ™áƒáƒ“áƒ˜ áƒ£áƒ™áƒ•áƒ” áƒ’áƒáƒ›áƒáƒ§áƒ”áƒœáƒ”áƒ‘áƒ£áƒšáƒ˜áƒ'], 409);
         }
 
 
@@ -96,7 +103,7 @@ class PromoCodeController extends Controller
         ]);
 
         return response()->json([
-            'message' => 'პრომოკოდი წარმატებით გამოყენებულია',
+            'message' => 'áƒžáƒ áƒáƒ›áƒáƒ™áƒáƒ“áƒ˜ áƒ¬áƒáƒ áƒ›áƒáƒ¢áƒ”áƒ‘áƒ˜áƒ— áƒ’áƒáƒ›áƒáƒ§áƒ”áƒœáƒ”áƒ‘áƒ£áƒšáƒ˜áƒ',
             'discount_percent' => $promo->discount_percent,
             'discounted_amount' => $discountAmount,
             'owner_credit_amount' => $ownerCreditAmount,
@@ -119,9 +126,11 @@ class PromoCodeController extends Controller
             'codes.*.owner_user_id' => 'required|exists:users,id',
             'codes.*.discount_percent' => 'required|numeric|min:0|max:50',
             'codes.*.owner_credit_percent' => 'required|numeric|min:0|max:50',
+            'codes.*.max_uses' => 'nullable|integer|min:1',
         ]);
 
         foreach ($validated['codes'] as $codeData) {
+            $codeData['max_uses'] = $codeData['max_uses'] ?? 1;
             PromoCode::create($codeData);
         }
 

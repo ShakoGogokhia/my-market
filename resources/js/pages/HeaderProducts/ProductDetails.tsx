@@ -83,29 +83,33 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
     if (Array.isArray(localProduct.images) && localProduct.images.length > 0) {
       return localProduct.images;
     }
-    if (localProduct.image) {
-      return [localProduct.image];
-    }
-    return ["/images/placeholder.png"];
+
+    return [{ url: "/images/placeholder.png" }];
   }, [localProduct]);
 
-  const getImageUrl = (img: ProductImage | string | null | undefined): string => {
-    if (!img) return "/images/placeholder.png";
-    if (typeof img === "string") return img;
-    if (img?.url) return img.url;
+  const getImageUrl = (img: ProductImage | null | undefined): string => {
+    if (typeof img === "object" && img?.url) {
+      return img.url;
+    }
+
+    if (typeof img === "string" && img.trim() !== "") {
+      return img;
+    }
+
     return "/images/placeholder.png";
   };
 
   const getProductImageUrl = (productItem: ProductType): string => {
     if (Array.isArray(productItem.images) && productItem.images.length > 0) {
       const firstImage = productItem.images[0];
-      if (typeof firstImage === "string") return firstImage;
-      if (firstImage?.url) return firstImage.url;
-    }
 
-    if (productItem.image) {
-      if (typeof productItem.image === "string") return productItem.image;
-      if (productItem.image?.url) return productItem.image.url;
+      if (typeof firstImage === "object" && firstImage?.url) {
+        return firstImage.url;
+      }
+
+      if (typeof firstImage === "string" && firstImage.trim() !== "") {
+        return firstImage;
+      }
     }
 
     return "/images/placeholder.png";
@@ -254,11 +258,10 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                     <button
                       key={index}
                       onClick={() => setImgIdx(index)}
-                      className={`flex h-24 min-w-[90px] items-center justify-center overflow-hidden rounded-2xl border bg-white p-2 transition ${
-                        index === imgIdx
-                          ? "border-emerald-500 ring-4 ring-emerald-100"
-                          : "border-gray-200 hover:border-emerald-300"
-                      }`}
+                      className={`flex h-24 min-w-[90px] items-center justify-center overflow-hidden rounded-2xl border bg-white p-2 transition ${index === imgIdx
+                        ? "border-emerald-500 ring-4 ring-emerald-100"
+                        : "border-gray-200 hover:border-emerald-300"
+                        }`}
                     >
                       <img
                         src={getImageUrl(img)}
@@ -309,22 +312,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
             <div className="xl:sticky xl:top-6 xl:self-start">
               <div className="overflow-hidden rounded-[34px] border border-white/60 bg-white/90 shadow-[0_25px_80px_rgba(15,23,42,0.10)] backdrop-blur">
                 <div className="border-b border-gray-100 p-6 sm:p-8">
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {localProduct.category && (
-                      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-                        {t(`categories.${localProduct.category}`, {
-                          defaultValue: localProduct.category,
-                        })}
-                      </span>
-                    )}
 
-                    {discountPercent > 0 && (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-red-200 bg-gradient-to-r from-red-500 to-rose-500 px-3 py-1 text-xs font-extrabold text-white shadow-sm shadow-red-200/60">
-                        <BadgePercent size={14} />
-                        {discountPercent}% OFF
-                      </span>
-                    )}
-                  </div>
 
                   <h1 className="text-3xl font-black leading-tight tracking-tight text-gray-900 sm:text-4xl">
                     {localProduct.name}
@@ -349,17 +337,13 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                   )}
 
                   <div className="mt-6">
-                    {discountPercent > 0 && displayPrice.old ? (
+                    {displayPrice.hasDiscount && displayPrice.old ? (
                       <div className="flex flex-wrap items-end gap-3">
                         <span className="text-lg font-medium text-gray-400 line-through">
                           {displayPrice.old.toFixed(2)} ₾
                         </span>
                         <span className="text-4xl font-black tracking-tight text-emerald-700">
                           {displayPrice.current.toFixed(2)} ₾
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
-                          <BadgePercent size={14} />
-                          Save {discountPercent}%
                         </span>
                       </div>
                     ) : (
@@ -389,7 +373,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                         <ShieldCheck size={16} />
                         ხარისხი
                       </div>
-                     
+
                     </div>
 
                     <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
@@ -397,7 +381,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                         <Truck size={16} />
                         შეკვეთა
                       </div>
-                     
+
                     </div>
 
                     <div className="rounded-2xl border border-gray-200 bg-gray-50 p-4">
@@ -405,7 +389,7 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                         <BadgePercent size={16} />
                         ფასდაკლება
                       </div>
-                     
+
                     </div>
                   </div>
 
@@ -520,22 +504,20 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
               <div className="flex flex-wrap gap-3">
                 <button
                   onClick={() => setActiveTab("description")}
-                  className={`rounded-full px-4 py-2 text-sm font-bold transition ${
-                    activeTab === "description"
-                      ? "bg-emerald-600 text-white shadow"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                  className={`rounded-full px-4 py-2 text-sm font-bold transition ${activeTab === "description"
+                    ? "bg-emerald-600 text-white shadow"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                 >
                   {t("body.product.description", "Description")}
                 </button>
 
                 <button
                   onClick={() => setActiveTab("details")}
-                  className={`rounded-full px-4 py-2 text-sm font-bold transition ${
-                    activeTab === "details"
-                      ? "bg-emerald-600 text-white shadow"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
+                  className={`rounded-full px-4 py-2 text-sm font-bold transition ${activeTab === "details"
+                    ? "bg-emerald-600 text-white shadow"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
                 >
                   {t("body.product.showDetails", "Details")}
                 </button>

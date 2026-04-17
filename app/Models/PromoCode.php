@@ -11,6 +11,17 @@ class PromoCode extends Model
         'owner_user_id',
         'discount_percent',
         'owner_credit_percent',
+        'max_uses',
+        'uses_count',
+        'used',
+    ];
+
+    protected $casts = [
+        'discount_percent' => 'decimal:2',
+        'owner_credit_percent' => 'decimal:2',
+        'max_uses' => 'integer',
+        'uses_count' => 'integer',
+        'used' => 'boolean',
     ];
     public function index()
     {
