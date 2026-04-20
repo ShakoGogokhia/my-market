@@ -513,13 +513,13 @@ function getProductImageUrl(product: {
       <Header />
       <CookieConsent />
       <Head>
-        <title>General Technology asdadasdads</title>
+        <title>General Technology</title>
         <link
           rel="preload"
           as="image"
           href="/images/CarouselIMG/generalis-webiscover.jpg"
         />
-      </Head>
+      </Head>asdasd
 
       <Toaster />
       <div className="bg-white">
