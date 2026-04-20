@@ -1,0 +1,4 @@
+cd /var/www/html/Market
+git pull origin main
+npm run build
+php artisan optimize:clear
