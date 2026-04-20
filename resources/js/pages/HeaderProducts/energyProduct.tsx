@@ -453,7 +453,7 @@ export default function ProductPage() {
         </div>
       </div>
 
-      <div className="space-y-4 p-5">
+      <div className="max-h-[calc(100dvh-11rem)] space-y-4 overflow-y-auto p-5 pr-4 overscroll-contain">
         <div>
           <label className="mb-2 block text-sm font-semibold text-slate-800">
             {t("body.energy.searchInProduct")}
@@ -581,7 +581,7 @@ export default function ProductPage() {
             />
           </div>
 
-          <div className="mt-2 max-h-56 overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+          <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
             {filteredTranslatedCategories.length === 0 ? (
               <div className="px-3 py-2 text-sm text-slate-500">{tp.noMatches}</div>
             ) : (
@@ -666,7 +666,7 @@ export default function ProductPage() {
             />
           </div>
 
-          <div className="mt-2 max-h-56 overflow-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
+          <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-lg">
             {filteredBrands.length === 0 ? (
               <div className="px-3 py-2 text-sm text-slate-500">{tp.noMatches}</div>
             ) : (
@@ -812,9 +812,9 @@ export default function ProductPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
-            <aside className="hidden lg:sticky lg:top-6 lg:block lg:self-start">
-              <FilterSidebar />
-            </aside>
+          <aside className="hidden lg:sticky lg:top-6 lg:block lg:self-start lg:max-h-[calc(100dvh-3rem)] lg:overflow-y-auto lg:pr-1">
+            <FilterSidebar />
+          </aside>
 
             <main>
               <div className="mx-auto w-full max-w-[1480px]">
@@ -1049,29 +1049,35 @@ export default function ProductPage() {
             <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
-              className="absolute right-0 top-0 h-full w-full max-w-sm overflow-y-auto bg-white p-6 shadow-2xl"
+              className="absolute right-0 top-0 flex h-full w-full max-w-sm flex-col overflow-hidden bg-white shadow-2xl"
             >
-              <div className="mb-6 flex items-center justify-between">
-                <div>
-                  <h3 className="text-2xl font-black text-slate-900">{tp.filter}</h3>
-                  <p className="text-xs text-slate-500">{tp.filterSubtitle}</p>
+              <div className="border-b border-slate-100 px-6 pb-4 pt-6">
+                <div className="mb-6 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-2xl font-black text-slate-900">{tp.filter}</h3>
+                    <p className="text-xs text-slate-500">{tp.filterSubtitle}</p>
+                  </div>
+                  <button
+                    onClick={() => setMobileFiltersOpen(false)}
+                    className="rounded-full bg-slate-100 p-3 text-slate-700"
+                  >
+                    <X size={20} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => setMobileFiltersOpen(false)}
-                  className="rounded-full bg-slate-100 p-3 text-slate-700"
-                >
-                  <X size={20} />
-                </button>
               </div>
 
-              <FilterSidebar />
+              <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+                <FilterSidebar />
+              </div>
 
-              <button
-                onClick={() => setMobileFiltersOpen(false)}
-                className="mt-6 w-full rounded-2xl bg-slate-900 py-4 text-sm font-bold text-white shadow-xl"
-              >
-                {tp.done}
-              </button>
+              <div className="border-t border-slate-100 bg-white px-4 py-4">
+                <button
+                  onClick={() => setMobileFiltersOpen(false)}
+                  className="w-full rounded-2xl bg-slate-900 py-4 text-sm font-bold text-white shadow-xl"
+                >
+                  {tp.done}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
