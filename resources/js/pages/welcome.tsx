@@ -72,6 +72,11 @@ import { Toaster, toast } from "sonner";
 import HeroBackground from "./HeroBackground";
 import MainLayout from "@/layouts/MainLayout";
 import Products from "../HeaderProducts/energyProduct";
+import {
+  getProductImageUrls,
+  resolveProductImageUrl,
+  type ProductImageSource,
+} from "@/utils/productImages";
 import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
@@ -108,7 +113,8 @@ interface ProductType {
   created_at: string;
   in_stock: number;
   brand: string;
-  images?: string[];
+  image?: ProductImageSource;
+  images?: ProductImageSource[];
   description: string;
   category: string;
   applied_promocode?: string;
@@ -359,23 +365,15 @@ export default function Welcome() {
   };
 
 function getProductImageUrl(product: {
-  images?: Array<string | { url?: string | null }>;
-  image?: string | null;
+  images?: ProductImageSource[];
+  image?: ProductImageSource;
 }) {
-  if (Array.isArray(product.images) && product.images.length > 0) {
-    const firstImage = product.images[0];
-
-    if (typeof firstImage === "object" && firstImage?.url?.trim()) {
-      return firstImage.url;
-    }
-
-    if (typeof firstImage === "string" && firstImage.trim()) {
-      return firstImage;
-    }
-  }
-
-  return "/images/placeholder.png";
+  return getProductImageUrls(product)[0] || resolveProductImageUrl(product.image);
 }
+
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    event.currentTarget.src = "/images/placeholder.png";
+  };
 
   const addToCart = (product: ProductType) => {
     setLoadingProductId(product.id);
@@ -832,12 +830,7 @@ function getProductImageUrl(product: {
                             )
                           : 0;
 
-                      const imageUrl =
-                        Array.isArray(product.images) && product.images.length
-                          ? typeof product.images[0] === "string"
-                            ? product.images[0]
-                            : product.images[0]?.url ?? "/images/placeholder.png"
-                          : product.image ?? "/images/placeholder.png";
+                      const imageUrl = getProductImageUrl(product);
 
                       return (
                         <Link
@@ -877,6 +870,7 @@ function getProductImageUrl(product: {
                                   src={imageUrl}
                                   alt={product.name}
                                   className="h-full w-full object-contain drop-shadow-xl"
+                                  onError={handleImageError}
                                 />
                               </div>
 

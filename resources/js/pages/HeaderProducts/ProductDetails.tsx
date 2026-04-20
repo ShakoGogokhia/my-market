@@ -18,8 +18,11 @@ import axios from "axios";
 import { useTranslation } from "@/translation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
-
-type ProductImage = string | { url?: string };
+import {
+  getProductImageUrls,
+  resolveProductImageUrl,
+  type ProductImageSource,
+} from "@/utils/productImages";
 
 type ProductSpecification = {
   key: string;
@@ -35,7 +38,7 @@ type ProductType = {
   category?: string;
   description?: string;
   image?: string | { url?: string } | null;
-  images?: ProductImage[];
+  images?: ProductImageSource[];
   specifications?: ProductSpecification[];
   in_stock: number | string;
   price: number | string;
@@ -80,39 +83,17 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
   }, [product]);
 
   const images = useMemo(() => {
-    if (Array.isArray(localProduct.images) && localProduct.images.length > 0) {
-      return localProduct.images;
-    }
+    const collected = getProductImageUrls(localProduct);
 
-    return [{ url: "/images/placeholder.png" }];
+    return collected.length > 0 ? collected.map((url) => ({ url })) : [{ url: "/images/placeholder.png" }];
   }, [localProduct]);
 
-  const getImageUrl = (img: ProductImage | null | undefined): string => {
-    if (typeof img === "object" && img?.url) {
-      return img.url;
-    }
-
-    if (typeof img === "string" && img.trim() !== "") {
-      return img;
-    }
-
-    return "/images/placeholder.png";
+  const getProductImageUrl = (productItem: ProductType): string => {
+    return getProductImageUrls(productItem)[0] || resolveProductImageUrl(productItem.image);
   };
 
-  const getProductImageUrl = (productItem: ProductType): string => {
-    if (Array.isArray(productItem.images) && productItem.images.length > 0) {
-      const firstImage = productItem.images[0];
-
-      if (typeof firstImage === "object" && firstImage?.url) {
-        return firstImage.url;
-      }
-
-      if (typeof firstImage === "string" && firstImage.trim() !== "") {
-        return firstImage;
-      }
-    }
-
-    return "/images/placeholder.png";
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    event.currentTarget.src = "/images/placeholder.png";
   };
 
   const displayPrice = useMemo(() => {
@@ -264,9 +245,10 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                         }`}
                     >
                       <img
-                        src={getImageUrl(img)}
+                        src={resolveProductImageUrl(img)}
                         alt={`${localProduct.name}-${index + 1}`}
                         className="h-full w-full object-contain"
+                        onError={handleImageError}
                       />
                     </button>
                   ))}
@@ -277,9 +259,10 @@ export default function ProductDetails({ product }: ProductDetailsProps) {
                     <AnimatePresence mode="wait">
                       <motion.img
                         key={imgIdx}
-                        src={getImageUrl(images[imgIdx])}
+                        src={resolveProductImageUrl(images[imgIdx])}
                         alt={`${localProduct.name}-${imgIdx + 1}`}
                         className="max-h-[460px] w-full object-contain"
+                        onError={handleImageError}
                         initial={{ opacity: 0, x: 40 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: -40 }}

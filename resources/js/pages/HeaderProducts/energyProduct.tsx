@@ -38,8 +38,12 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "../../components/ui/pagination";
+import {
+  getProductImageUrls,
+  resolveProductImageUrl,
+  type ProductImageSource,
+} from "@/utils/productImages";
 
-type ProductImage = string | { url?: string };
 type CategoryItem = {
   name: string;
   icon_url?: string | null;
@@ -59,9 +63,13 @@ type ProductType = {
   applied_promocode?: boolean;
   pre_order_discount_applied?: boolean;
   already_preordered?: boolean;
-  image?: string | { url?: string } | null;
-  images?: ProductImage[];
+  image?: ProductImageSource;
+  images?: ProductImageSource[];
 };
+
+function getProductImages(product: ProductType): string[] {
+  return getProductImageUrls(product);
+}
 
 export default function ProductPage() {
   const { t } = useTranslation();
@@ -303,20 +311,12 @@ export default function ProductPage() {
   };
 
   function getProductImageUrl(product: ProductType): string {
-  if (Array.isArray(product.images) && product.images.length > 0) {
-    const firstImage = product.images[0];
-
-    if (typeof firstImage === "object" && firstImage?.url?.trim()) {
-      return firstImage.url;
-    }
-
-    if (typeof firstImage === "string" && firstImage.trim() !== "") {
-      return firstImage;
-    }
+    return getProductImages(product)[0] || resolveProductImageUrl(product.image);
   }
 
-  return "/images/placeholder.png";
-}
+  const handleImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    event.currentTarget.src = "/images/placeholder.png";
+  };
 
   function getDisplayPrice(product: ProductType) {
     const original = Number(product.price || 0);
@@ -905,6 +905,7 @@ export default function ProductPage() {
                                       alt={product.name}
                                       loading="lazy"
                                       className="h-full w-full object-contain drop-shadow-xl"
+                                      onError={handleImageError}
                                     />
                                   </div>
 
