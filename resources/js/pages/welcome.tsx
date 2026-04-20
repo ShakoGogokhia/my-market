@@ -513,7 +513,7 @@ function getProductImageUrl(product: {
       <Header />
       <CookieConsent />
       <Head>
-        <title>General Technology</title>
+        <title>General Technology asdadasdads</title>
         <link
           rel="preload"
           as="image"
