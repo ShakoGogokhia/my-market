@@ -33,13 +33,13 @@ class CarouselImage extends Model
         }
 
         if (str_starts_with($path, 'storage/')) {
-            return asset($path);
+            return '/' . $path;
         }
 
         if (str_starts_with($path, 'carousel-images/')) {
-            return asset('storage/' . $path);
+            return '/storage/' . $path;
         }
 
-        return asset($path);
+        return '/' . $path;
     }
 }
