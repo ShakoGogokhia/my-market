@@ -24,10 +24,13 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
-Route::middleware(['auth', 'verified', 'admin'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
+});
+
+Route::middleware(['auth', 'verified', 'admin'])->group(function () {
     Route::get('/admin/warehouse-items', [WarehouseInventoryController::class, 'index'])->name('admin.warehouse-items.index');
     Route::post('/admin/products', [ProductController::class, 'store']);
     Route::put('/admin/products/{id}', [ProductController::class, 'adminUpdate']);

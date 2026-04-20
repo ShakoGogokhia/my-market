@@ -34,8 +34,8 @@ class RegisteredUserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|lowercase|email|max:255|unique:' . User::class,
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-            'mobile_number' => 'required|string|max:50',
-            'registration_type' => 'required|in:personal,organization',
+            'mobile_number' => 'nullable|string|max:50',
+            'registration_type' => 'nullable|in:personal,organization',
             'organization_identification_code' => 'nullable|string|max:255',
             'contact_person' => 'nullable|string|max:255',
             'organization_location' => 'nullable|string|max:255',
@@ -48,7 +48,7 @@ class RegisteredUserController extends Controller
             'email' => $request->email,
             'password' => Hash::make($request->password),
             'mobile_number' => $request->mobile_number,
-            'registration_type' => $request->registration_type,
+            'registration_type' => $request->registration_type ?? 'personal',
             'organization_identification_code' => $request->organization_identification_code,
             'contact_person' => $request->contact_person,
             'organization_location' => $request->organization_location,
@@ -59,6 +59,6 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect('/');
+        return redirect()->intended(route('dashboard', absolute: false));
     }
 }
