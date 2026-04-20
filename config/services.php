@@ -36,7 +36,7 @@ return [
     ],
 
     'billing_warehouse' => [
-        'url' => env('BILLING_WAREHOUSE_API_URL'),
+        'url' => env('BILLING_WAREHOUSE_API_URL', 'https://ng-crm.ailink.ge'),
         'token' => env('BILLING_WAREHOUSE_API_TOKEN'),
         'timeout' => (int) env('BILLING_WAREHOUSE_API_TIMEOUT', 10),
     ],
