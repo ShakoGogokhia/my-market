@@ -519,7 +519,7 @@ function getProductImageUrl(product: {
           as="image"
           href="/images/CarouselIMG/generalis-webiscover.jpg"
         />
-      </Head>asdasd
+      </Head>
 
       <Toaster />
       <div className="bg-white">
