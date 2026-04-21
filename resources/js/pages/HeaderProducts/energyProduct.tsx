@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { useTranslation } from "@/translation";
+import { getCategoryLabel, type LocalizedCategory } from "@/utils/category";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import {
@@ -46,6 +47,9 @@ import {
 
 type CategoryItem = {
   name: string;
+  name_en?: string | null;
+  name_ru?: string | null;
+  name_ka?: string | null;
   icon_url?: string | null;
 };
 
@@ -72,7 +76,7 @@ function getProductImages(product: ProductType): string[] {
 }
 
 export default function ProductPage() {
-  const { t } = useTranslation();
+  const { lang, t } = useTranslation();
   const tp = t("body.energy");
 
   const [products, setProducts] = useState<ProductType[]>([]);
@@ -180,10 +184,10 @@ export default function ProductPage() {
   const translatedCategories = useMemo(() => {
     return allCategories.map((category) => ({
       key: category.name,
-      label: t(`categories.${category.name}`, { defaultValue: category.name }),
+      label: getCategoryLabel(category as LocalizedCategory, lang),
       iconUrl: category.icon_url || null,
     }));
-  }, [allCategories, t]);
+  }, [allCategories, lang]);
 
   const filteredBrands = useMemo(() => {
     return allBrands.filter((brand) =>
@@ -641,7 +645,7 @@ export default function ProductPage() {
                   }
                   className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-[0_8px_16px_rgba(5,150,105,0.18)] transition hover:bg-emerald-700"
                 >
-                  {t(`categories.${cat}`, { defaultValue: cat })} ×
+                  {translatedCategories.find((item) => item.key === cat)?.label || cat} ×
                 </button>
               ))}
             </div>

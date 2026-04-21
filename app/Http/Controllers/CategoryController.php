@@ -8,10 +8,20 @@ use Illuminate\Support\Facades\Storage;
 
 class CategoryController extends Controller
 {
+    private function normalizeTranslation(?string $value): ?string
+    {
+        $trimmed = trim((string) $value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
     private function categoryPayload(Category $category): array
     {
         return [
             'name' => $category->name,
+            'name_en' => $category->name_en ?? $category->name,
+            'name_ru' => $category->name_ru,
+            'name_ka' => $category->name_ka,
             'icon_url' => $category->icon_url,
         ];
     }
@@ -27,8 +37,16 @@ class CategoryController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:categories,name',
+            'name_en' => 'nullable|string|max:255',
+            'name_ru' => 'nullable|string|max:255',
+            'name_ka' => 'nullable|string|max:255',
             'icon' => 'nullable|image|max:4096',
         ]);
+
+        $name = trim($validated['name']);
+        $nameEn = $this->normalizeTranslation($validated['name_en'] ?? null) ?? $name;
+        $nameRu = $this->normalizeTranslation($validated['name_ru'] ?? null);
+        $nameKa = $this->normalizeTranslation($validated['name_ka'] ?? null);
 
         $iconPath = null;
         if ($request->hasFile('icon')) {
@@ -36,7 +54,10 @@ class CategoryController extends Controller
         }
 
         $category = Category::create([
-            'name' => trim($validated['name']),
+            'name' => $name,
+            'name_en' => $nameEn,
+            'name_ru' => $nameRu,
+            'name_ka' => $nameKa,
             'icon_path' => $iconPath,
         ]);
 
@@ -60,8 +81,16 @@ class CategoryController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:categories,name,' . $existingCategory->id,
+            'name_en' => 'nullable|string|max:255',
+            'name_ru' => 'nullable|string|max:255',
+            'name_ka' => 'nullable|string|max:255',
             'icon' => 'nullable|image|max:4096',
         ]);
+
+        $name = trim($validated['name']);
+        $nameEn = $this->normalizeTranslation($validated['name_en'] ?? null) ?? $name;
+        $nameRu = $this->normalizeTranslation($validated['name_ru'] ?? null);
+        $nameKa = $this->normalizeTranslation($validated['name_ka'] ?? null);
 
         $iconPath = $existingCategory->icon_path;
         if ($request->hasFile('icon')) {
@@ -73,7 +102,10 @@ class CategoryController extends Controller
         }
 
         $existingCategory->update([
-            'name' => trim($validated['name']),
+            'name' => $name,
+            'name_en' => $nameEn,
+            'name_ru' => $nameRu,
+            'name_ka' => $nameKa,
             'icon_path' => $iconPath,
         ]);
 
@@ -118,6 +150,9 @@ class CategoryController extends Controller
         $categories = Category::orderBy('name', 'asc')->get()->map(function (Category $cat) use ($counts) {
             return [
                 'name' => $cat->name,
+                'name_en' => $cat->name_en ?? $cat->name,
+                'name_ru' => $cat->name_ru,
+                'name_ka' => $cat->name_ka,
                 'total' => $counts[$cat->name]->total ?? 0,
                 'icon_url' => $cat->icon_url,
             ];

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Category extends Model
 {
-    protected $fillable = ['name', 'icon_path'];
+    protected $fillable = ['name', 'name_en', 'name_ru', 'name_ka', 'icon_path'];
 
     protected $appends = ['icon_url'];
 

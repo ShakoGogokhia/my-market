@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import axios from "axios";
 import { router } from "@inertiajs/react";
 import { useTranslation } from "@/translation";
+import { getCategoryLabel, type LocalizedCategory } from "@/utils/category";
 
 import {
   FaList,
@@ -74,12 +75,15 @@ const ICONS: Record<string, ReactElement> = {
 
 type CategoryItem = {
   name: string;
+  name_en?: string | null;
+  name_ru?: string | null;
+  name_ka?: string | null;
   total?: number;
   icon_url?: string | null;
 };
 
 export default function ProductsSidebar() {
-  const { t } = useTranslation();
+  const { lang, t } = useTranslation();
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +131,9 @@ export default function ProductsSidebar() {
     return <span className="text-slate-500">{getIcon(category.name)}</span>;
   };
 
+  const getCategoryName = (category: CategoryItem) =>
+    getCategoryLabel(category as LocalizedCategory, lang);
+
   if (loading) {
     return <div className="p-6 text-center text-gray-500">იტვირთება...</div>;
   }
@@ -163,13 +170,13 @@ export default function ProductsSidebar() {
                     ? "scale-[1.02] bg-green-600 text-white shadow-md"
                     : "bg-gray-100 text-gray-700 hover:bg-green-600 hover:text-white"
                 }`}
-              >
-                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/90 text-slate-700 shadow-sm">
-                  <CategoryVisual category={cat} />
-                </span>
-                <span className="min-w-0 flex-1 truncate">
-                  {cat.name}
-                </span>
+                >
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/90 text-slate-700 shadow-sm">
+                    <CategoryVisual category={cat} />
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {getCategoryName(cat)}
+                  </span>
                 <span className="rounded-full bg-white/90 px-2 py-0.5 text-xs font-semibold text-slate-500 shadow-sm">
                   {cat.total}
                 </span>

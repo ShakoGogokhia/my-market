@@ -20,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { toast, Toaster } from "sonner";
 import { FolderPlus, LayoutGrid, PencilLine, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
+import { getCategoryLabel, type LocalizedCategory } from "@/utils/category";
 
 const breadcrumbs: BreadcrumbItem[] = [
   { title: "მთავარი გვერდი", href: "/dashboard" },
@@ -36,6 +37,9 @@ type PageProps = {
 
 type CategoryItem = {
   name: string;
+  name_en?: string | null;
+  name_ru?: string | null;
+  name_ka?: string | null;
   icon_url?: string | null;
 };
 
@@ -92,6 +96,17 @@ function CategoryAvatar({ category }: { category?: CategoryItem | null }) {
   );
 }
 
+function getCategorySearchText(category: CategoryItem) {
+  return [category.name, category.name_en, category.name_ru, category.name_ka]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function getCategoryDisplayLabel(category: CategoryItem) {
+  return getCategoryLabel(category as LocalizedCategory, "en");
+}
+
 export default function CategoriesPage() {
   const { auth } = usePage<PageProps>().props;
   const user = auth?.user;
@@ -102,12 +117,18 @@ export default function CategoriesPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState("");
+  const [createNameEn, setCreateNameEn] = useState("");
+  const [createNameRu, setCreateNameRu] = useState("");
+  const [createNameKa, setCreateNameKa] = useState("");
   const [createIcon, setCreateIcon] = useState<File | null>(null);
   const [createIconPreview, setCreateIconPreview] = useState<string | null>(null);
 
   const [editOpen, setEditOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
   const [editName, setEditName] = useState("");
+  const [editNameEn, setEditNameEn] = useState("");
+  const [editNameRu, setEditNameRu] = useState("");
+  const [editNameKa, setEditNameKa] = useState("");
   const [editIcon, setEditIcon] = useState<File | null>(null);
   const [editIconPreview, setEditIconPreview] = useState<string | null>(null);
 
@@ -164,7 +185,7 @@ export default function CategoriesPage() {
   const filteredCategories = useMemo(() => {
     if (!searchTerm.trim()) return categories;
     const query = searchTerm.toLowerCase();
-    return categories.filter((category) => category.name.toLowerCase().includes(query));
+    return categories.filter((category) => getCategorySearchText(category).includes(query));
   }, [categories, searchTerm]);
 
   const stats = {
@@ -176,6 +197,9 @@ export default function CategoriesPage() {
 
   const openCreate = () => {
     setCreateName("");
+    setCreateNameEn("");
+    setCreateNameRu("");
+    setCreateNameKa("");
     setCreateIcon(null);
     setCreateOpen(true);
   };
@@ -183,6 +207,9 @@ export default function CategoriesPage() {
   const openEdit = (category: CategoryItem) => {
     setEditingCategory(category);
     setEditName(category.name);
+    setEditNameEn(category.name_en || category.name);
+    setEditNameRu(category.name_ru || "");
+    setEditNameKa(category.name_ka || "");
     setEditIcon(null);
     setEditOpen(true);
   };
@@ -196,10 +223,17 @@ export default function CategoriesPage() {
       return;
     }
 
+    const nameEn = createNameEn.trim() || name;
+    const nameRu = createNameRu.trim();
+    const nameKa = createNameKa.trim();
+
     try {
       setLoading(true);
       const formData = new FormData();
       formData.append("name", name);
+      formData.append("name_en", nameEn);
+      formData.append("name_ru", nameRu);
+      formData.append("name_ka", nameKa);
       if (createIcon) {
         formData.append("icon", createIcon);
       }
@@ -211,6 +245,9 @@ export default function CategoriesPage() {
       toast.success("კატეგორია შეიქმნა.");
       setCreateOpen(false);
       setCreateName("");
+      setCreateNameEn("");
+      setCreateNameRu("");
+      setCreateNameKa("");
       setCreateIcon(null);
       await fetchCategories();
     } catch (err: any) {
@@ -235,10 +272,17 @@ export default function CategoriesPage() {
       return;
     }
 
+    const nameEn = editNameEn.trim() || name;
+    const nameRu = editNameRu.trim();
+    const nameKa = editNameKa.trim();
+
     try {
       setLoading(true);
       const formData = new FormData();
       formData.append("name", name);
+      formData.append("name_en", nameEn);
+      formData.append("name_ru", nameRu);
+      formData.append("name_ka", nameKa);
       if (editIcon) {
         formData.append("icon", editIcon);
       }
@@ -252,6 +296,9 @@ export default function CategoriesPage() {
       setEditOpen(false);
       setEditingCategory(null);
       setEditName("");
+      setEditNameEn("");
+      setEditNameRu("");
+      setEditNameKa("");
       setEditIcon(null);
       await fetchCategories();
     } catch (err) {
@@ -378,7 +425,12 @@ export default function CategoriesPage() {
                         </td>
                         <td className="px-6 py-3">
                           <div className="space-y-1">
-                            <span className="font-medium text-slate-800">{category.name}</span>
+                            <span className="font-medium text-slate-800">{getCategoryDisplayLabel(category)}</span>
+                            <div className="text-xs text-slate-500">
+                              <div>EN: {category.name_en || category.name}</div>
+                              <div>RU: {category.name_ru || "—"}</div>
+                              <div>KA: {category.name_ka || "—"}</div>
+                            </div>
                             {!category.icon_url && (
                               <p className="text-xs text-slate-500">ნაგულისხმევი icon გამოიყენება</p>
                             )}
@@ -451,6 +503,26 @@ export default function CategoriesPage() {
                 autoFocus
                 className="h-11 rounded-xl border-slate-300"
               />
+              <div className="grid gap-4 pt-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Russian name</Label>
+                  <Input
+                    value={createNameRu}
+                    onChange={(e) => setCreateNameRu(e.target.value)}
+                    placeholder="Например: Камеры"
+                    className="h-11 rounded-xl border-slate-300"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Georgian name</Label>
+                  <Input
+                    value={createNameKa}
+                    onChange={(e) => setCreateNameKa(e.target.value)}
+                    placeholder="მაგ: კამერები"
+                    className="h-11 rounded-xl border-slate-300"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -508,6 +580,26 @@ export default function CategoriesPage() {
                 onChange={(e) => setEditName(e.target.value)}
                 className="h-11 rounded-xl border-slate-300"
               />
+              <div className="grid gap-4 pt-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Russian name</Label>
+                  <Input
+                    value={editNameRu}
+                    onChange={(e) => setEditNameRu(e.target.value)}
+                    placeholder="Например: Камеры"
+                    className="h-11 rounded-xl border-slate-300"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Georgian name</Label>
+                  <Input
+                    value={editNameKa}
+                    onChange={(e) => setEditNameKa(e.target.value)}
+                    placeholder="მაგ: კამერები"
+                    className="h-11 rounded-xl border-slate-300"
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
